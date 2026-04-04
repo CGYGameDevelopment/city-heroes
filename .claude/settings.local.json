@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"C:\\\\Users\\\\conal\\\\Desktop\\\\city-heroes\"/*.js)",
+      "WebSearch",
+      "WebFetch(domain:www.elevenforum.com)",
+      "WebFetch(domain:pureinfotech.com)",
+      "WebFetch(domain:www.makeuseof.com)",
+      "WebFetch(domain:www.winhelponline.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:www.guidingtech.com)"
+    ]
+  }
+}
