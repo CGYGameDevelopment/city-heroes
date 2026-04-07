@@ -3,6 +3,9 @@
 Thumbs.db
 desktop.ini
 
+# Claude
+.claude/
+
 # Editors
 .vscode/
 .idea/

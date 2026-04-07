@@ -8,7 +8,8 @@
       "WebFetch(domain:www.makeuseof.com)",
       "WebFetch(domain:www.winhelponline.com)",
       "WebFetch(domain:gist.github.com)",
-      "WebFetch(domain:www.guidingtech.com)"
+      "WebFetch(domain:www.guidingtech.com)",
+      "WebFetch(domain:www.top-password.com)"
     ]
   }
 }
