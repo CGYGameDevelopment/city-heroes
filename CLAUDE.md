@@ -90,7 +90,7 @@ Valid `effect.type` values and their required fields. Hero effects are in `apply
 
 | Type | Required fields |
 |------|----------------|
-| `transform` | `zones` (array of `'field'\|'hand'\|'deck'\|'discard'`), `target: { match: 'id'\|'type', value }`, `replace_with` (card id) — note: only `zones` and `replace_with` are validated at startup; a missing `target` will fail silently at runtime |
+| `transform` | `zones` (array of `'field'\|'hand'\|'deck'\|'discard'`), `target: { match: 'id'\|'type', value }`, `replace_with` (card id) |
 | `stun` | `selection`: `'random'\|'opposite'` |
 | `draw` | `amount` |
 | `scrap` | `target`: `'starter'\|'any_hand'\|'any_discard'` |
@@ -105,12 +105,24 @@ Valid `effect.type` values and their required fields. Hero effects are in `apply
 | `stat_mod_all` | `stat`: `'atk'`, `amount` — buffs all active hero field cards; `duration` is stored and logged but not enforced (no expiry logic) |
 | `kill_monster` | *(no extra fields)* — permanently banishes a random monster type from this fight |
 | `cleanse` | `zones` (array), `count`: `'all'\|number` — removes `corrupted` flag from cards |
+| `ally_bonus` | `stat`: `'atk'\|'gold'\|'shield'\|'morale'`, `amount`; optional `role` (defaults to source card's role), optional `threshold` (defaults to 2). Counts heroes in `hero_field` matching `role` (including self); if `>= threshold`, applies amount. `atk` buffs self only; others are global. |
+| `combo_bonus` | `requires`: `'role'\|'type'`, `value` (string), `stat`: `'atk'\|'gold'\|'shield'\|'morale'\|'draw'`, `amount`. Fires only if a hero matching `requires/value` has already resolved earlier this turn (excludes self). |
+| `chain_bonus` | `requires`: `'role'\|'type'`, `value` (string), `stat`: `'atk'\|'gold'\|'shield'\|'morale'`, `amount`. Like `combo_bonus`, but scales: `amount` × number of already-resolved matches this turn (excludes self). |
+| `multistrike` | `count` (>= 2) — source card's ATK fires N times this resolution. Each strike absorbs shield independently. |
+| `lifesteal` | *(no extra fields)* — heals City Morale equal to damage dealt to the Big Bad by this card (capped at `max_morale`). |
+| `bulwark` | *(no extra fields)* — damage absorbed by monster shield is added to City Defence. |
+| `pierce` | *(no extra fields)* — this card's ATK ignores monster shield. |
+| `scrap_self` | *(no extra fields)* — banishes this card from the run after resolution instead of returning it to discard. |
+| `scaling_atk` | `source`: `'gold_pool'\|'city_def'\|'hand_size'\|'monster_shield'\|'city_morale_lost'`, optional `divisor` (>= 1, defaults to 1). Adds `floor(source / divisor)` to source card's ATK this turn. |
+| `sacrifice` | `target`: `'adjacent_starter'\|'adjacent_any'`, `stat`: `'atk'\|'gold'\|'shield'\|'morale'`, `amount`. Banishes an adjacent hero from the run, then grants the bonus. |
 
 **Monster effects**
 
 | Type | Required fields |
 |------|----------------|
 | `kill` | *(no extra fields)* — permanently deletes a random hero card from the run |
+| `corrupt` | optional `count` (defaults to 1) — marks N random non-corrupted cards across deck/hand/discard as `corrupted`. Corrupted cards skip resolution. Removed by hero `cleanse` effect. |
+| `enrage` | `amount` — permanently buffs the Big Bad's ATK by `amount` for the rest of the fight. Stacks. |
 
 ---
 

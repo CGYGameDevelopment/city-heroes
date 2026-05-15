@@ -1620,7 +1620,7 @@ Registry.register_cards_market([
     type:     'hero',
     cost:     4,
     atk:      0,
-    atk_type: 'none',
+    atk_type: 'physical',
     gold:     0,
     morale:   0,
     shield:   0,
