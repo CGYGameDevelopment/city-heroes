@@ -28,7 +28,11 @@ let _on_hero_slot_click;
 let _on_market_card_click;
 let _on_unlock_market_slot;
 let _on_upgrade_market_click;
+let _on_forge_click;
+let _get_forge_cost;
 let _apply_upgrade;
+let _apply_treasure;
+let _apply_event_choice;
 
 // Engine query helpers injected by setupEventListeners().
 let _get_effective_market_size;
@@ -57,10 +61,31 @@ export function render() {
   render_big_bad(state);
   render_city(state);
   render_shields(state);
+  render_intent(state);
+  render_treasures(state);
   render_field(state);
   render_hand(state);
   render_piles(state);
   render_market(state);
+}
+
+/**
+ * Treasure inventory panel — shows the run's treasures in the stats bar.
+ * Hover to see what each treasure does. Phase 5.
+ */
+function render_treasures(state) {
+  const panel = document.getElementById('treasure-inventory');
+  if (!panel) return;
+  panel.replaceChildren();
+  const treasures = state.run.treasures ?? [];
+  if (treasures.length === 0) return;
+  for (const t of treasures) {
+    const chip = document.createElement('span');
+    chip.className   = 'treasure-chip';
+    chip.textContent = '✦ ' + t.name;
+    chip.title       = t.desc;
+    panel.appendChild(chip);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -121,6 +146,50 @@ function render_city(state) {
   document.getElementById('city-market-size').textContent = `${effective}/${FIELD_SIZE_MAX}`;
 
   paint_sprite_scaled(document.getElementById('city-sprite'), city_art[city.id], 64, 64);
+}
+
+/**
+ * Big Bad Intent panel — Phase 1 telegraphing.
+ * Shows the player exactly what the Big Bad will do next turn: its direct
+ * attack value (with weakened modifier baked in) and the names of the monsters
+ * that will be summoned. Hidden during fight-end and outside fights.
+ */
+function render_intent(state) {
+  const panel = document.getElementById('bb-intent-panel');
+  if (!panel) return;
+
+  const intent = state.fight.next_intent;
+  if (!intent) { panel.replaceChildren(); panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  panel.replaceChildren();
+
+  const label = document.createElement('span');
+  label.className   = 'bb-intent-label';
+  label.textContent = 'NEXT TURN:';
+  panel.appendChild(label);
+
+  // ATK pill
+  const atk_pill = document.createElement('span');
+  atk_pill.className   = 'bb-intent-pill bb-intent-atk';
+  atk_pill.textContent = `⚔ ${intent.atk}`;
+  atk_pill.title       = `${state.fight.big_bad.name} will strike the city for ${intent.atk} damage.`;
+  panel.appendChild(atk_pill);
+
+  // Summon list
+  if (intent.monsters.length === 0) {
+    const none = document.createElement('span');
+    none.className   = 'bb-intent-pill bb-intent-empty';
+    none.textContent = 'no summons';
+    panel.appendChild(none);
+  } else {
+    for (const def of intent.monsters) {
+      const pill = document.createElement('span');
+      pill.className   = `bb-intent-pill bb-intent-monster role-${def.role}`;
+      pill.textContent = def.name;
+      pill.title       = def.desc;
+      panel.appendChild(pill);
+    }
+  }
 }
 
 function render_shields(state) {
@@ -267,27 +336,40 @@ function render_market_upgrade_slot(state) {
   const container  = document.getElementById('market-upgrade-slot');
   container.replaceChildren();
 
+  // ── Market upgrade button (or "fully unlocked" notice) ──
   const next_level = state.fight.market_level + 1;
   if (next_level > MARKET_LEVEL_MAX) {
     const maxed = document.createElement('div');
     maxed.className   = 'market-upgrade-maxed';
     maxed.textContent = 'Market fully unlocked';
     container.appendChild(maxed);
-    return;
+  } else {
+    const cost = MARKET_UPGRADE_COSTS[next_level];
+    if (cost === undefined) {
+      console.warn(`render_market_upgrade_slot: no cost defined for level ${next_level}.`);
+    } else {
+      const can_afford = state.fight.gold_pool >= cost;
+      const btn        = document.createElement('button');
+      btn.className    = `market-upgrade-btn${can_afford ? '' : ' locked'}`;
+      btn.textContent  = `Unlock Level ${next_level} Cards — ${cost} Gold`;
+      btn.disabled     = !can_afford;
+      if (can_afford) btn.addEventListener('click', () => _on_upgrade_market_click());
+      container.appendChild(btn);
+    }
   }
 
-  const cost = MARKET_UPGRADE_COSTS[next_level];
-  if (cost === undefined) {
-    console.warn(`render_market_upgrade_slot: no cost defined for level ${next_level}.`);
-    return;
+  // ── Forge button (Phase 7) ──
+  const forge_cost = _get_forge_cost(state);
+  if (forge_cost !== null) {
+    const can_afford = state.fight.gold_pool >= forge_cost;
+    const forge_btn  = document.createElement('button');
+    forge_btn.className   = `forge-btn${can_afford ? '' : ' locked'}`;
+    forge_btn.textContent = `🔥 Forge: scrap a Starter — ${forge_cost} Gold`;
+    forge_btn.title       = 'Permanently remove a random Starter from your deck. Cost rises with each use this fight.';
+    forge_btn.disabled    = !can_afford;
+    if (can_afford) forge_btn.addEventListener('click', () => _on_forge_click());
+    container.appendChild(forge_btn);
   }
-  const can_afford = state.fight.gold_pool >= cost;
-  const btn        = document.createElement('button');
-  btn.className    = `market-upgrade-btn${can_afford ? '' : ' locked'}`;
-  btn.textContent  = `Unlock Level ${next_level} Cards — ${cost} Gold`;
-  btn.disabled     = !can_afford;
-  if (can_afford) btn.addEventListener('click', () => _on_upgrade_market_click());
-  container.appendChild(btn);
 }
 
 function make_market_active_slot(state, i) {
@@ -469,11 +551,41 @@ function render_card_into_element(card, card_el, large = false, display_cost = n
     card_el.appendChild(make_resolution_pips(card.resolution_pips));
   }
 
+  // Keyword chips — small icons under the description so the player learns
+  // the shared vocabulary at a glance. Hover the card for full text in preview.
+  if (card.keywords?.length) {
+    const kw_row = document.createElement('div');
+    kw_row.className = 'card-keywords';
+    for (const kw of card.keywords) {
+      const chip = document.createElement('span');
+      chip.className   = `kw-chip kw-${kw}`;
+      chip.textContent = KEYWORD_LABELS[kw] ?? kw;
+      chip.title       = KEYWORD_DESCRIPTIONS[kw] ?? kw;
+      kw_row.appendChild(chip);
+    }
+    card_el.appendChild(kw_row);
+  }
+
   const desc_el = document.createElement('div');
   desc_el.className   = 'card-desc';
   desc_el.textContent = card.desc || '';
   card_el.appendChild(desc_el);
 }
+
+const KEYWORD_LABELS = {
+  pierce:    'PIERCE',
+  lifesteal: 'LIFESTEAL',
+  taunt:     'TAUNT',
+  charge:    'CHARGE',
+  echo:      'ECHO',
+};
+const KEYWORD_DESCRIPTIONS = {
+  pierce:    'ATK damage ignores Monster Shield.',
+  lifesteal: 'ATK damage dealt also restores that much Morale.',
+  taunt:     'Opposite Monster ATK is absorbed by this Hero. The Hero forfeits its action this turn.',
+  charge:    'On recruit, this card goes to the top of your deck — guaranteed in your next draw.',
+  echo:      'After resolving, returns to your hand instead of the discard pile.',
+};
 
 function make_empty_slot(label_text) {
   const el = document.createElement('div');
@@ -596,8 +708,10 @@ export function show_prefight_screen(state) {
   document.getElementById('prefight-bb-name').textContent  = bb.name;
   document.getElementById('prefight-bb-title').textContent = bb.title;
   document.getElementById('prefight-bb-deck').textContent  = bb.deck_desc;
-  document.getElementById('prefight-bb-stats').textContent =
-    `HP: ${bb.max_hp} | ATK: ${bb.atk} | Monsters: ${bb.monsters_per_turn}/turn`;
+  const stats_parts = [`HP: ${bb.max_hp}`, `ATK: ${bb.atk}`, `Monsters: ${bb.monsters_per_turn}/turn`];
+  if (bb.weak_against)   stats_parts.push(`weak to ${bb.weak_against.toUpperCase()} (+50%)`);
+  if (bb.strong_against) stats_parts.push(`resists ${bb.strong_against.toUpperCase()} (-50%)`);
+  document.getElementById('prefight-bb-stats').textContent = stats_parts.join(' | ');
   document.getElementById('prefight-city-name').textContent   = city.name;
   document.getElementById('prefight-city-type').textContent   = city.type;
   document.getElementById('prefight-city-effect').textContent = city.effects.map(e => e.desc).join(' ');
@@ -609,41 +723,127 @@ export function show_prefight_screen(state) {
   show_screen('screen-prefight');
 }
 
+/**
+ * Between-fight event screen (Phase 10). Shows the event narrative and the
+ * player's choices. Each choice resolves through _apply_event_choice which
+ * mutates run state and proceeds to the upgrade screen.
+ */
+export function show_event_screen(state, event_def) {
+  if (!event_def) {
+    // Defensive — shouldn't happen, but never softlock the run.
+    show_upgrade_screen(state);
+    return;
+  }
+  document.getElementById('event-title').textContent = event_def.title;
+  document.getElementById('event-desc').textContent  = event_def.desc;
+  const container = document.getElementById('event-choices');
+  container.replaceChildren();
+  event_def.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'event-choice-btn';
+    const label = document.createElement('div');
+    label.className   = 'event-choice-label';
+    label.textContent = choice.label;
+    const desc = document.createElement('div');
+    desc.className   = 'event-choice-desc';
+    desc.textContent = choice.desc;
+    btn.appendChild(label);
+    btn.appendChild(desc);
+    btn.addEventListener('click', () => _apply_event_choice(state, event_def, i));
+    container.appendChild(btn);
+  });
+  show_screen('screen-event');
+}
+
 export function show_upgrade_screen(state) {
-  const upgrade_card_defs = _shuffle_array([...Registry.cards_upgrades]).slice(0, UPGRADE_CHOICE_COUNT);
+  // Filter out treasures the player already owns so they aren't offered twice.
+  const owned_ids     = new Set((state.run.treasures ?? []).map(t => t.id));
+  const treasure_pool = (Registry.treasures ?? []).filter(t => !owned_ids.has(t.id));
+
+  // Offer 2 promoted heroes + 1 treasure (Phase 5). If no treasures remain,
+  // fall back to 3 promoted heroes so the screen always presents 3 choices.
+  const upgrades_shuffled = _shuffle_array([...Registry.cards_upgrades]);
+  const choices = [
+    { kind: 'promoted', def: upgrades_shuffled[0] },
+    { kind: 'promoted', def: upgrades_shuffled[1] },
+    treasure_pool.length > 0
+      ? { kind: 'treasure', def: _shuffle_array([...treasure_pool])[0] }
+      : { kind: 'promoted', def: upgrades_shuffled[2] },
+  ].filter(c => c.def);
+
+  // Shuffle so the treasure isn't always rightmost.
+  const display_choices = _shuffle_array(choices);
 
   document.getElementById('upgrade-victory-msg').textContent = state.fight.big_bad.victory_message;
 
   const container = document.getElementById('upgrade-choices');
   container.replaceChildren();
 
-  for (const card_def of upgrade_card_defs) {
-    const instance = _create_card_instance(card_def);
-
-    const wrap = document.createElement('div');
-    wrap.className = 'upgrade-choice';
-
-    const label = document.createElement('div');
-    label.className = 'upgrade-label'; label.textContent = 'PROMOTED HERO';
-
-    const card_display = document.createElement('div');
-    card_display.className = 'upgrade-card';
-    card_display.id        = `upgcard-${instance.uid}`;
-
-    const sublabel = document.createElement('div');
-    sublabel.className = 'upgrade-sublabel'; sublabel.textContent = instance.desc;
-
-    wrap.appendChild(label);
-    wrap.appendChild(card_display);
-    wrap.appendChild(sublabel);
-    wrap.addEventListener('click', () => _apply_upgrade(state, card_def));
-    container.appendChild(wrap);
-
-    render_card_into_element(instance, card_display, false);
-    wrap.addEventListener('mouseenter', () => render_card_preview(instance));
-    wrap.addEventListener('mouseleave', () => clear_card_preview());
+  for (const choice of display_choices) {
+    if (choice.kind === 'promoted') {
+      container.appendChild(make_promoted_choice(state, choice.def));
+    } else {
+      container.appendChild(make_treasure_choice(state, choice.def));
+    }
   }
   show_screen('screen-upgrade');
+}
+
+function make_promoted_choice(state, card_def) {
+  const instance = _create_card_instance(card_def);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'upgrade-choice';
+
+  const label = document.createElement('div');
+  label.className = 'upgrade-label'; label.textContent = 'PROMOTED HERO';
+
+  const card_display = document.createElement('div');
+  card_display.className = 'upgrade-card';
+  card_display.id        = `upgcard-${instance.uid}`;
+
+  const sublabel = document.createElement('div');
+  sublabel.className = 'upgrade-sublabel'; sublabel.textContent = instance.desc;
+
+  wrap.appendChild(label);
+  wrap.appendChild(card_display);
+  wrap.appendChild(sublabel);
+  wrap.addEventListener('click', () => _apply_upgrade(state, card_def));
+
+  render_card_into_element(instance, card_display, false);
+  wrap.addEventListener('mouseenter', () => render_card_preview(instance));
+  wrap.addEventListener('mouseleave', () => clear_card_preview());
+  return wrap;
+}
+
+function make_treasure_choice(state, treasure_def) {
+  const wrap = document.createElement('div');
+  wrap.className = 'upgrade-choice upgrade-choice-treasure';
+
+  const label = document.createElement('div');
+  label.className = 'upgrade-label upgrade-label-treasure';
+  label.textContent = 'TREASURE';
+
+  const card_display = document.createElement('div');
+  card_display.className = 'upgrade-card upgrade-card-treasure';
+  // Visual: a chest icon over the treasure name.
+  const icon = document.createElement('div');
+  icon.className   = 'treasure-icon';
+  icon.textContent = '✦';
+  const name = document.createElement('div');
+  name.className   = 'treasure-name';
+  name.textContent = treasure_def.name;
+  card_display.appendChild(icon);
+  card_display.appendChild(name);
+
+  const sublabel = document.createElement('div');
+  sublabel.className = 'upgrade-sublabel'; sublabel.textContent = treasure_def.desc;
+
+  wrap.appendChild(label);
+  wrap.appendChild(card_display);
+  wrap.appendChild(sublabel);
+  wrap.addEventListener('click', () => _apply_treasure(state, treasure_def));
+  return wrap;
 }
 
 export function show_summary_screen(state, is_victory) {
@@ -716,7 +916,11 @@ export function setupEventListeners(fns) {
   _on_market_card_click   = fns.on_market_card_click;
   _on_unlock_market_slot  = fns.on_unlock_market_slot;
   _on_upgrade_market_click = fns.on_upgrade_market_click;
+  _on_forge_click          = fns.on_forge_click;
+  _get_forge_cost          = fns.get_forge_cost;
   _apply_upgrade          = fns.apply_upgrade;
+  _apply_treasure         = fns.apply_treasure;
+  _apply_event_choice     = fns.apply_event_choice;
 
   // Query helpers used by render functions
   _get_effective_market_size = fns.get_effective_market_size;

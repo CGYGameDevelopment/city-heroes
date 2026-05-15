@@ -1,7 +1,13 @@
 // cities.js
 // All city definitions. A new city is randomly selected at the start of each fight.
-// City effects are always-on. Conditional auto-triggers are not yet implemented —
-// all effects use trigger: 'always_on'. Do not add engine logic to this file.
+//
+// Static stats (max_morale, market_size, starting_def, hero_cost_discount,
+// bonus_gold_per_turn) shape the *baseline* of a fight. Phase 9 adds an
+// optional `passives` array that fires effects at engine hooks
+// ('start_of_turn', 'start_of_fight', 'on_recruit', 'on_turn_end') —
+// same schema as treasures.
+//
+// Do not add engine logic to this file.
 
 var cities = [
 
@@ -15,10 +21,10 @@ var cities = [
     hero_cost_discount: 0,
     bonus_gold_per_turn: 0,
     effects: [
-      {
-        trigger: 'always_on',
-        desc:    'The market opens with 3 slots.',
-      },
+      { trigger: 'always_on', desc: 'The market opens with 3 slots. +1 Gold at the start of every turn.' },
+    ],
+    passives: [
+      { hook: 'start_of_turn', effect: { type: 'gain_gold', amount: 1 } },
     ],
   },
 
@@ -32,10 +38,10 @@ var cities = [
     hero_cost_discount: 0,
     bonus_gold_per_turn: 0,
     effects: [
-      {
-        trigger: 'always_on',
-        desc:    'The city starts each fight with 5 City defence already in the pool.',
-      },
+      { trigger: 'always_on', desc: 'Starts each fight with 5 Defence. +1 Defence at the start of every turn.' },
+    ],
+    passives: [
+      { hook: 'start_of_turn', effect: { type: 'gain_shield', amount: 1 } },
     ],
   },
 
@@ -49,10 +55,10 @@ var cities = [
     hero_cost_discount: 0,
     bonus_gold_per_turn: 0,
     effects: [
-      {
-        trigger: 'always_on',
-        desc:    'The market opens with 4 slots instead of the default 3.',
-      },
+      { trigger: 'always_on', desc: 'Market opens with 4 slots. Draw 1 extra card at the start of each fight.' },
+    ],
+    passives: [
+      { hook: 'start_of_fight', effect: { type: 'draw', amount: 1 } },
     ],
   },
 
@@ -66,10 +72,10 @@ var cities = [
     hero_cost_discount: 1,
     bonus_gold_per_turn: 0,
     effects: [
-      {
-        trigger: 'always_on',
-        desc:    'All hero cards cost 1 less Gold to recruit (minimum 1).',
-      },
+      { trigger: 'always_on', desc: 'Hero cards cost 1 less Gold (min 1). On every recruit, deal 1 piercing damage to the Big Bad.' },
+    ],
+    passives: [
+      { hook: 'on_recruit', effect: { type: 'damage', amount: 1, target: 'big_bad', pierce: true } },
     ],
   },
 
@@ -83,10 +89,10 @@ var cities = [
     hero_cost_discount: 0,
     bonus_gold_per_turn: 2,
     effects: [
-      {
-        trigger: 'always_on',
-        desc:    'At the start of each Recruit phase, 2 bonus Gold is added to the Gold Pool.',
-      },
+      { trigger: 'always_on', desc: '+2 Gold per turn. +1 Morale at the end of every turn.' },
+    ],
+    passives: [
+      { hook: 'on_turn_end', effect: { type: 'gain_morale', amount: 1 } },
     ],
   },
 

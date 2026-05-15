@@ -106,3 +106,5 @@ var cards_upgrades = [
   },
 
 ];
+
+Registry.register_cards_upgrades(cards_upgrades);

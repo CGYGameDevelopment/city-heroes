@@ -1,0 +1,161 @@
+// 01_data_cards_spells.js
+// Spell card definitions (Phase 6).
+//
+// Spells are type 'spell' — they live in the deck and hand but never go
+// to a hero field slot. When clicked from hand during the HEROES phase,
+// they resolve all 'on_resolve' effects immediately, then either go to
+// the discard pile or are consumed (removed from the run pool entirely).
+//
+// Convention: spells should use only the effect block for their actual
+// payoff (damage, gain_gold, draw, etc.). The card's atk/gold/morale/shield
+// fields are not applied for spells — only effect blocks fire.
+//
+// Consume flag: spells with `consume: true` are one-shot — after casting,
+// they leave the run permanently. This is the natural deck-thinning lever.
+// Higher-power spells should generally be consume:true so they don't
+// dominate by recycling.
+
+Registry.register_cards_market([
+
+  {
+    id:       'bolt',
+    role:     'magical',
+    level:    2,
+    name:     'BOLT',
+    type:     'spell',
+    cost:     2,
+    consume:  true,
+    atk:      0,
+    atk_type: 'none',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [
+      { type: 'damage', amount: 4, target: 'big_bad' },
+    ],
+    desc:     'Deal 4 damage to the Big Bad. Consume.',
+    art:      make_art_painter('magical'),
+  },
+
+  {
+    id:       'rally',
+    role:     'tactical',
+    level:    2,
+    name:     'RALLY',
+    type:     'spell',
+    cost:     2,
+    consume:  false,
+    atk:      0,
+    atk_type: 'none',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [
+      { type: 'stat_mod_all', stat: 'atk', amount: 2, duration: 'turn' },
+    ],
+    desc:     'All Heroes on the field gain +2 ATK this turn.',
+    art:      make_art_painter('tactical'),
+  },
+
+  {
+    id:       'recall',
+    role:     'magical',
+    level:    3,
+    name:     'RECALL',
+    type:     'spell',
+    cost:     3,
+    consume:  false,
+    atk:      0,
+    atk_type: 'none',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [
+      { type: 'recur', selection: 'random', fallback: 'none' },
+    ],
+    desc:     'Recall a random Hero from your discard to the field.',
+    art:      make_art_painter('magical'),
+  },
+
+  {
+    id:       'arcane_insight',
+    role:     'tactical',
+    level:    2,
+    name:     'ARCANE INSIGHT',
+    type:     'spell',
+    cost:     1,
+    consume:  true,
+    atk:      0,
+    atk_type: 'none',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [
+      { type: 'draw', amount: 2 },
+    ],
+    desc:     'Draw 2 cards. Consume.',
+    art:      make_art_painter('tactical'),
+  },
+
+  {
+    id:       'banish',
+    role:     'magical',
+    level:    4,
+    name:     'BANISH',
+    type:     'spell',
+    cost:     4,
+    consume:  true,
+    atk:      0,
+    atk_type: 'none',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [
+      { type: 'kill_monster', selection: 'random', fallback: 'none' },
+    ],
+    desc:     'Banish a random Monster type from this fight permanently. Consume.',
+    art:      make_art_painter('magical'),
+  },
+
+  {
+    id:       'meteor',
+    role:     'magical',
+    level:    5,
+    name:     'METEOR',
+    type:     'spell',
+    cost:     5,
+    consume:  true,
+    atk:      0,
+    atk_type: 'none',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [
+      { type: 'damage', amount: 9, target: 'big_bad', pierce: true },
+    ],
+    desc:     'Deal 9 piercing damage to the Big Bad. Consume.',
+    art:      make_art_painter('magical'),
+  },
+
+  {
+    id:       'sanctuary',
+    role:     'magical',
+    level:    3,
+    name:     'SANCTUARY',
+    type:     'spell',
+    cost:     3,
+    consume:  false,
+    atk:      0,
+    atk_type: 'none',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [
+      { type: 'gain_morale', amount: 5 },
+      { type: 'gain_shield', amount: 3 },
+    ],
+    desc:     'Restore 5 Morale. Gain 3 City Defence.',
+    art:      make_art_painter('magical'),
+  },
+
+]);

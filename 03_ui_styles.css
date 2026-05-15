@@ -337,6 +337,18 @@ body {
 .card.card-promoted { background: var(--card-bg-promoted); }
 .card.card-monster  { background: var(--card-bg-monster); }
 .card.card-atk      { background: var(--card-bg-atk); }
+/* Spells (Phase 6) — distinct purple-violet bg + dashed border so they
+   read as "instant" cards that resolve from hand without a body. */
+.card.card-spell    {
+  background: linear-gradient(180deg, #1a0a26 0%, #0a0510 100%);
+  border-style: dashed;
+  border-width: 2px;
+  box-shadow: 0 0 6px #6e22ce33 inset;
+}
+#preview-card.card-spell {
+  background: linear-gradient(180deg, #1a0a26 0%, #0a0510 100%);
+  border-style: dashed;
+}
 /* Role drives border colour */
 .card.role-physical { border-color: #993333; }
 .card.role-magical  { border-color: #334499; }
@@ -753,6 +765,32 @@ body {
   letter-spacing: 2px;
   text-transform: uppercase;
 }
+
+/* Phase 7 — Forge button: distinct red/orange so it doesn't blend with
+   the gold market-upgrade affordance. Sits in #market-upgrade-slot. */
+.forge-btn {
+  font-family: var(--font);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 6px 20px;
+  border: 1px solid #b45309;
+  background: #1a0a04;
+  color: #fdba74;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: border-color 0.15s, color 0.15s;
+}
+.forge-btn:hover:not(:disabled) {
+  border-color: #fdba74;
+  color: var(--text-hi);
+}
+.forge-btn.locked {
+  border-color: var(--border2);
+  color: var(--text-dim);
+  cursor: default;
+  opacity: 0.6;
+}
 #fight-board.bazaar {
   background: var(--bg);
   border-top: 1px solid var(--gold);
@@ -1130,4 +1168,248 @@ body {
 #hero-order-arrow,
 #quick-play-btn {
   display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   EVENT SCREEN (Phase 10)
+   Between-fight moral choice. Centered narrative + N buttons.
+───────────────────────────────────────────────────────────── */
+#screen-event {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#screen-event.active { display: flex; }
+
+.event-frame {
+  max-width: 640px;
+  padding: 32px 40px;
+  background: linear-gradient(180deg, #1a1018 0%, #0a0a14 100%);
+  border: 2px solid #5a3a6a;
+  border-radius: 8px;
+  box-shadow: 0 0 24px #00000088, 0 0 12px #5a3a6a44;
+  text-align: center;
+}
+
+.event-title {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #d8b4fe;
+  text-shadow: 0 0 8px #7e22ce66;
+  margin-bottom: 16px;
+}
+
+.event-desc {
+  font-size: var(--fs-md);
+  color: var(--text-hi);
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+#event-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 18px;
+  background: #1a1424;
+  border: 1px solid #5a3a6a;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font);
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.event-choice-btn:hover {
+  border-color: #d8b4fe;
+  background: #221a30;
+}
+
+.event-choice-label {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: #d8b4fe;
+  letter-spacing: 1px;
+}
+
+.event-choice-desc {
+  font-size: var(--fs-sm);
+  color: var(--text);
+  font-weight: 400;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TREASURE INVENTORY (Phase 5)
+   Sits in the stats bar. Each treasure is a small gold chip with
+   a tooltip describing its effect.
+───────────────────────────────────────────────────────────── */
+#treasure-inventory {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  max-width: 100%;
+}
+.treasure-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(180deg, #2a1f0a 0%, #1a1006 100%);
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  color: var(--gold2);
+  cursor: help;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TREASURE CARDS (Phase 5)
+   Displayed on the upgrade screen alongside Promoted Heroes.
+   Distinct gold/violet palette so the player immediately reads them
+   as a different class of reward.
+───────────────────────────────────────────────────────────── */
+.upgrade-choice-treasure { /* hover/active styles inherit from .upgrade-choice */ }
+
+.upgrade-label-treasure {
+  color: var(--gold2) !important;
+  text-shadow: 0 0 6px #d4b05088;
+}
+
+.upgrade-card-treasure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 180px;
+  height: 220px;
+  background: linear-gradient(180deg, #2a1f0a 0%, #1a1006 100%);
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  box-shadow: 0 0 12px #00000088 inset, 0 0 8px #b8984066;
+}
+
+.treasure-icon {
+  font-size: 64px;
+  color: var(--gold2);
+  text-shadow: 0 0 12px #fbbf2466;
+  line-height: 1;
+}
+
+.treasure-name {
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--gold2);
+  text-align: center;
+  letter-spacing: 1px;
+  padding: 0 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   KEYWORD CHIPS (Phase 2)
+   Small uppercase chips under the card description. Players learn
+   the shared vocabulary by spotting the same chip on multiple cards.
+───────────────────────────────────────────────────────────── */
+.card-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  margin: 2px 0 1px;
+}
+.kw-chip {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  background: #11131a;
+  color: var(--text);
+  line-height: 1.2;
+}
+.kw-pierce    { color: #fde68a; border-color: #b45309; }
+.kw-lifesteal { color: #fca5a5; border-color: #be185d; background: #1a0710; }
+.kw-taunt     { color: #93c5fd; border-color: #1d4ed8; }
+.kw-charge    { color: #fcd34d; border-color: #d97706; background: #1a1004; }
+.kw-echo      { color: #c4b5fd; border-color: #6d28d9; background: #0f0a1a; }
+
+/* ─────────────────────────────────────────────────────────────
+   BIG BAD INTENT PANEL (Phase 1)
+   Sits above the monster row. Tells the player exactly what the
+   Big Bad will do next turn so fights become puzzles.
+───────────────────────────────────────────────────────────── */
+.bb-intent-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin: 4px 0 6px;
+  background: linear-gradient(180deg, #1a0a0a 0%, #110404 100%);
+  border: 1px solid #4a1a1a;
+  border-radius: 6px;
+  box-shadow: 0 0 8px #00000099 inset, 0 0 4px #5511113c;
+}
+.bb-intent-panel.hidden { display: none; }
+
+.bb-intent-label {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: #f87171;
+  text-shadow: 0 0 4px #991b1b88;
+  margin-right: 4px;
+}
+
+.bb-intent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  background: #1f0707;
+  border: 1px solid #5a1a1a;
+  border-radius: 999px;
+  color: #fca5a5;
+  box-shadow: 0 1px 2px #00000088;
+}
+.bb-intent-pill.bb-intent-atk {
+  background: #2a0808;
+  border-color: #8a1a1a;
+  color: #fde6e6;
+  text-shadow: 0 0 4px #ff444466;
+}
+.bb-intent-pill.bb-intent-empty {
+  color: #888;
+  border-color: #333;
+  background: #161616;
+  font-style: italic;
+}
+.bb-intent-pill.bb-intent-monster.role-physical {
+  border-color: #b45309; color: #fdba74;
+  background: linear-gradient(180deg, #1a0905 0%, #100403 100%);
+}
+.bb-intent-pill.bb-intent-monster.role-magical {
+  border-color: #7e22ce; color: #d8b4fe;
+  background: linear-gradient(180deg, #100520 0%, #06010f 100%);
+}
+.bb-intent-pill.bb-intent-monster.role-tactical {
+  border-color: #65a30d; color: #d9f99d;
+  background: linear-gradient(180deg, #0a1004 0%, #050802 100%);
 }

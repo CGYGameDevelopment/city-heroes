@@ -89,6 +89,8 @@
         </div>
       </div>
       <div id="turn-counter">TURN <span id="turn-num">1</span></div>
+      <!-- Treasure inventory — shows out-of-deck treasures earned this run (Phase 5) -->
+      <div id="treasure-inventory"></div>
     </div>
 
     <!-- Board -->
@@ -106,6 +108,8 @@
         <div class="shield-pill city-def hidden" id="city-def-pill">&#128737; CITY DEF: <span id="city-def-val">0</span></div>
         <div class="shield-pill mon-shield hidden" id="mon-shield-pill">&#9876; MON SHIELD: <span id="mon-shield-val">0</span></div>
       </div>
+      <!-- Big Bad Intent panel — telegraphs what the Big Bad will do next turn -->
+      <div id="bb-intent-panel" class="bb-intent-panel"></div>
       <!-- Monster resolution order: right-to-left — initially hidden, shown by renderer -->
       <div id="monster-order-arrow" class="order-arrow-row monster-arrow-row">
         <div class="order-arrow-track monster-track">
@@ -201,6 +205,17 @@
 </div><!-- /#screen-fight -->
 
 <!-- ═══════════════════════════════════════════════════════════
+     BETWEEN-FIGHT EVENT (Phase 10)
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-event" class="screen">
+  <div class="event-frame">
+    <div class="event-title" id="event-title">EVENT</div>
+    <p class="event-desc" id="event-desc">An event begins.</p>
+    <div id="event-choices"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
      POST-FIGHT UPGRADE
 ═══════════════════════════════════════════════════════════ -->
 <div id="screen-upgrade" class="screen">
@@ -252,10 +267,14 @@
 <script src="03_ui_art_painters.js"></script>
 <script src="01_data_cards_starter.js"></script>
 <script src="01_data_cards_market.js"></script>
+<script src="01_data_cards_spells.js"></script>
 <script src="01_data_cards_upgrades.js"></script>
+<script src="01_data_cards_curses.js"></script>
 <script src="01_data_cards_monster.js"></script>
 <script src="01_data_enemies.js"></script>
 <script src="01_data_levels.js"></script>
+<script src="01_data_treasures.js"></script>
+<script src="01_data_events.js"></script>
 <script type="module" src="04_boot_main.js"></script>
 
 </body>
