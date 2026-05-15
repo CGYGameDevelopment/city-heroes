@@ -53,11 +53,23 @@ const VALID_STUN_SELECTIONS  = new Set(['random', 'opposite']);
 const VALID_SCRAP_TARGETS    = new Set(['starter', 'any_hand', 'any_discard']);
 const VALID_FIELD_CONDITIONS = new Set(['adjacent_role_match', 'field_count_gte']);
 const VALID_FIELD_STATS      = new Set(['atk', 'gold', 'shield', 'morale']);
+const VALID_ALLY_STATS       = new Set(['atk', 'gold', 'shield', 'morale']);
+const VALID_COMBO_STATS      = new Set(['atk', 'gold', 'shield', 'morale', 'draw']);
+const VALID_COMBO_REQUIRES   = new Set(['role', 'type']);
+const VALID_SCALING_SOURCES  = new Set([
+  'gold_pool', 'city_def', 'hand_size', 'monster_shield', 'city_morale_lost',
+]);
+const VALID_SACRIFICE_TARGETS = new Set(['adjacent_starter', 'adjacent_any']);
+const VALID_SACRIFICE_STATS   = new Set(['atk', 'gold', 'shield', 'morale']);
 const VALID_EFFECT_TYPES     = new Set([
   'transform', 'stun', 'recur', 'shield_drain',
   'weaken_atk', 'stat_mod_all', 'kill_monster', 'cleanse', 'kill',
   'haste', 'slow', 'stop',
   'draw', 'scrap', 'cost_reduce', 'field_bonus',
+  'ally_bonus', 'combo_bonus', 'scrap_self', 'pierce',
+  'chain_bonus', 'multistrike', 'lifesteal', 'bulwark',
+  'scaling_atk', 'sacrifice',
+  'corrupt', 'enrage',
 ]);
 
 // ─────────────────────────────────────────────────────────────
@@ -117,10 +129,58 @@ function validate_card_def(def, source) {
       if (effect.type === 'cost_reduce' && (typeof effect.amount !== 'number' || effect.amount < 1)) {
         errors.push(`${tag} effect[${i}] (cost_reduce) 'amount' must be a positive number.`);
       }
+      if (effect.type === 'ally_bonus') {
+        if (effect.role !== undefined && !VALID_ROLES.has(effect.role)) errors.push(`${tag} effect[${i}] (ally_bonus) invalid role '${effect.role}'.`);
+        if (!VALID_ALLY_STATS.has(effect.stat))                          errors.push(`${tag} effect[${i}] (ally_bonus) invalid stat '${effect.stat}'.`);
+        if (typeof effect.amount !== 'number')                            errors.push(`${tag} effect[${i}] (ally_bonus) 'amount' must be a number.`);
+        if (effect.threshold !== undefined && (typeof effect.threshold !== 'number' || effect.threshold < 1))
+          errors.push(`${tag} effect[${i}] (ally_bonus) 'threshold' must be a positive number.`);
+      }
+      if (effect.type === 'combo_bonus') {
+        if (!VALID_COMBO_REQUIRES.has(effect.requires)) errors.push(`${tag} effect[${i}] (combo_bonus) invalid requires '${effect.requires}'.`);
+        if (typeof effect.value !== 'string')           errors.push(`${tag} effect[${i}] (combo_bonus) 'value' must be a string.`);
+        if (!VALID_COMBO_STATS.has(effect.stat))         errors.push(`${tag} effect[${i}] (combo_bonus) invalid stat '${effect.stat}'.`);
+        if (typeof effect.amount !== 'number')           errors.push(`${tag} effect[${i}] (combo_bonus) 'amount' must be a number.`);
+      }
+      if (effect.type === 'chain_bonus') {
+        if (!VALID_COMBO_REQUIRES.has(effect.requires)) errors.push(`${tag} effect[${i}] (chain_bonus) invalid requires '${effect.requires}'.`);
+        if (typeof effect.value !== 'string')           errors.push(`${tag} effect[${i}] (chain_bonus) 'value' must be a string.`);
+        if (!VALID_ALLY_STATS.has(effect.stat))         errors.push(`${tag} effect[${i}] (chain_bonus) invalid stat '${effect.stat}'.`);
+        if (typeof effect.amount !== 'number')          errors.push(`${tag} effect[${i}] (chain_bonus) 'amount' must be a number.`);
+      }
+      if (effect.type === 'multistrike') {
+        if (typeof effect.count !== 'number' || effect.count < 2) {
+          errors.push(`${tag} effect[${i}] (multistrike) 'count' must be a number >= 2.`);
+        }
+      }
+      if (effect.type === 'scaling_atk') {
+        if (!VALID_SCALING_SOURCES.has(effect.source))  errors.push(`${tag} effect[${i}] (scaling_atk) invalid source '${effect.source}'.`);
+        if (effect.divisor !== undefined && (typeof effect.divisor !== 'number' || effect.divisor < 1)) {
+          errors.push(`${tag} effect[${i}] (scaling_atk) 'divisor' must be >= 1.`);
+        }
+      }
+      if (effect.type === 'sacrifice') {
+        if (!VALID_SACRIFICE_TARGETS.has(effect.target)) errors.push(`${tag} effect[${i}] (sacrifice) invalid target '${effect.target}'.`);
+        if (!VALID_SACRIFICE_STATS.has(effect.stat))     errors.push(`${tag} effect[${i}] (sacrifice) invalid stat '${effect.stat}'.`);
+        if (typeof effect.amount !== 'number')           errors.push(`${tag} effect[${i}] (sacrifice) 'amount' must be a number.`);
+      }
+      if (effect.type === 'corrupt') {
+        if (effect.count !== undefined && (typeof effect.count !== 'number' || effect.count < 1)) {
+          errors.push(`${tag} effect[${i}] (corrupt) 'count' must be a positive number.`);
+        }
+      }
+      if (effect.type === 'enrage') {
+        if (typeof effect.amount !== 'number' || effect.amount < 1) {
+          errors.push(`${tag} effect[${i}] (enrage) 'amount' must be a positive number.`);
+        }
+      }
       if (effect.type === 'field_bonus') {
         if (!VALID_FIELD_CONDITIONS.has(effect.condition)) errors.push(`${tag} effect[${i}] (field_bonus) invalid condition '${effect.condition}'.`);
         if (!VALID_FIELD_STATS.has(effect.stat))           errors.push(`${tag} effect[${i}] (field_bonus) invalid stat '${effect.stat}'.`);
         if (typeof effect.amount !== 'number')             errors.push(`${tag} effect[${i}] (field_bonus) 'amount' must be a number.`);
+        if (effect.condition === 'field_count_gte' && (typeof effect.threshold !== 'number' || effect.threshold < 1)) {
+          errors.push(`${tag} effect[${i}] (field_bonus) 'threshold' must be a positive number when condition is 'field_count_gte'.`);
+        }
       }
     });
   }

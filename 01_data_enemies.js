@@ -8,7 +8,7 @@
 // Low HP, low ATK, low monster pressure — an accessible opener.
 // ---------------------------------------------------------------------------
 
-var big_bads_tier_1 = [
+const big_bads_tier_1 = [
 
   {
     id:                'goblin_warchief',
@@ -47,7 +47,7 @@ var big_bads_tier_1 = [
 // Higher HP and ATK, mixed monster decks with disruption.
 // ---------------------------------------------------------------------------
 
-var big_bads_tier_2 = [
+const big_bads_tier_2 = [
 
   {
     id:                'iron_golem',
@@ -86,7 +86,22 @@ var big_bads_tier_2 = [
 // High HP, high ATK, aggressive monster decks with deck destruction.
 // ---------------------------------------------------------------------------
 
-var big_bads_tier_3 = [
+const big_bads_tier_3 = [
+
+  {
+    id:                'dread_hydra',
+    role:              'physical',
+    level:             20,
+    name:              'DREAD HYDRA',
+    title:             'The Many-Headed Plague',
+    tier:              3,
+    max_hp:            90,
+    atk:               4,
+    monsters_per_turn: 3,
+    deck_desc:         'Three heads, three threats. Maximum monster pressure every turn alongside punishing direct strikes. Survival demands strong offence and tight defence simultaneously.',
+    victory_message:   'The Hydra\'s heads fall still. The plague retreats with the tide.',
+    defeat_message:    'The Hydra\'s relentless assault overwhelmed every line of defence.',
+  },
 
   {
     id:                'lich_sovereign',

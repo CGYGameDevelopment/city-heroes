@@ -359,6 +359,54 @@ const big_bad_art = {
     p(3,9,dscale); p(3,10,dscale); p(16,9,dscale); p(16,10,dscale);
   },
 
+  dread_hydra(canvas) {
+    const ctx = canvas.getContext('2d');
+    const p = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x*4, y*4, 4, 4); };
+    ctx.clearRect(0, 0, 72, 72);
+    const sc = '#2a6a18', dsc = '#163a0a', lsc = '#4a9a28', eye = '#ff2200', fang = '#e8e4cc', belly = '#4a7a3a';
+
+    // Left head (x:1-5, y:1-4)
+    for(let x=1;x<=5;x++) for(let y=1;y<=4;y++) p(x,y,sc);
+    p(2,0,lsc); p(4,0,lsc);
+    p(2,2,eye); p(4,2,eye);
+    p(2,4,fang); p(3,4,fang); p(4,4,fang);
+    p(1,1,dsc); p(5,1,dsc);
+
+    // Center head (x:7-11, y:0-4) — tallest, dominant
+    for(let x=7;x<=11;x++) for(let y=0;y<=4;y++) p(x,y,sc);
+    p(7,0,lsc); p(8,0,lsc); p(10,0,lsc); p(11,0,lsc);
+    p(8,2,eye); p(10,2,eye);
+    p(8,4,fang); p(9,4,fang); p(10,4,fang);
+
+    // Right head (x:13-17, y:1-5)
+    for(let x=13;x<=17;x++) for(let y=1;y<=5;y++) p(x,y,sc);
+    p(14,0,lsc); p(16,0,lsc);
+    p(14,3,eye); p(16,3,eye);
+    p(14,5,fang); p(15,5,fang); p(16,5,fang);
+    p(13,1,dsc); p(17,1,dsc);
+
+    // Necks
+    for(let x=2;x<=4;x++) for(let y=4;y<=9;y++) p(x,y,dsc);
+    p(5,5,dsc); p(5,6,dsc);
+    for(let x=8;x<=10;x++) for(let y=4;y<=9;y++) p(x,y,dsc);
+    for(let x=13;x<=15;x++) for(let y=5;y<=9;y++) p(x,y,dsc);
+    p(12,6,dsc); p(12,7,dsc);
+
+    // Body
+    for(let x=1;x<=16;x++) for(let y=9;y<=15;y++) p(x,y,sc);
+    for(let x=2;x<=15;x+=2) for(let y=10;y<=14;y+=2) p(x,y,dsc);
+    for(let x=3;x<=14;x+=2) for(let y=11;y<=13;y+=2) p(x,y,lsc);
+    for(let x=4;x<=13;x++) for(let y=14;y<=15;y++) p(x,y,belly);
+
+    // Tails
+    for(let x=12;x<=17;x++) p(x,15,dsc);
+    for(let x=14;x<=17;x++) p(x,16,dsc);
+    p(16,17,sc); p(17,17,sc);
+    for(let x=0;x<=5;x++) p(x,15,dsc);
+    for(let x=0;x<=3;x++) p(x,16,dsc);
+    p(0,17,sc); p(1,17,sc);
+  },
+
   lich_sovereign(canvas) {
     const ctx = canvas.getContext('2d');
     const p = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x*4, y*4, 4, 4); };

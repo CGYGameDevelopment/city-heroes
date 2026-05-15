@@ -41,6 +41,10 @@ let _shuffle_array;
 // UI STATE — owned exclusively by renderer.js
 // ─────────────────────────────────────────────────────────────
 
+// Previous values tracked to detect damage/healing and trigger flash animations.
+let _prev_bb_hp       = null;
+let _prev_city_morale = null;
+
 /** Called by engine.js (via bridge) to signal that the hand selection should clear. */
 export function clear_hand_selection() {
   App.ui_state.selected_hand_uid = null;
@@ -67,8 +71,17 @@ export function render() {
 // STATS BAR
 // ─────────────────────────────────────────────────────────────
 
+const PHASE_LABELS = {
+  'DRAW':      'Drawing Cards',
+  'BIG_BAD':   'Enemy Spawns',
+  'HEROES':    'Place Heroes',
+  'RESOLVING': 'Battle!',
+  'RECRUIT':   'Recruit',
+  'FIGHT_END': 'Fight Over',
+};
+
 function render_stats(state) {
-  const phase    = state.turn.phase;
+  const phase     = state.turn.phase;
   const phase_btn = document.getElementById('phase-btn');
 
   document.getElementById('turn-num').textContent        = state.turn.turn_number + 1;
@@ -76,24 +89,45 @@ function render_stats(state) {
   document.getElementById('market-gold-val').textContent = state.fight.gold_pool;
 
   if (phase === 'DRAW' || phase === 'BIG_BAD') {
-    phase_btn.textContent = phase === 'DRAW' ? 'Drawing...' : 'Big Bad...';
+    phase_btn.textContent = phase === 'DRAW' ? 'Drawing...' : 'Enemy Spawns...';
     phase_btn.disabled    = true;
   } else if (phase === 'HEROES') {
-    phase_btn.textContent = 'End Heroes';
+    phase_btn.textContent = 'End Heroes Phase';
     phase_btn.disabled    = false;
   } else if (phase.startsWith('RESOLVING')) {
-    phase_btn.textContent = 'Resolving...';
+    phase_btn.textContent = 'Battle Resolving...';
     phase_btn.disabled    = true;
   } else if (phase === 'RECRUIT') {
-    phase_btn.textContent = 'End Recruit';
+    phase_btn.textContent = 'End Recruit Phase';
     phase_btn.disabled    = false;
   } else {
     phase_btn.textContent = '—';
     phase_btn.disabled    = true;
   }
 
+  // Colour the phase button by current phase
+  phase_btn.classList.remove('phase-heroes', 'phase-recruit');
+  if (phase === 'HEROES')  phase_btn.classList.add('phase-heroes');
+  if (phase === 'RECRUIT') phase_btn.classList.add('phase-recruit');
+
+  // Update phase indicator tag
+  const indicator = document.getElementById('phase-indicator');
+  if (indicator) {
+    indicator.textContent = PHASE_LABELS[phase] || phase;
+    indicator.className   = 'phase-' + phase.toLowerCase().replace(/_/g, '-');
+  }
+
   const quick_play_btn = document.getElementById('quick-play-btn');
   quick_play_btn.style.display = (phase === 'HEROES') ? 'inline-block' : 'none';
+}
+
+function flash_panel(panel_id, css_class) {
+  const el = document.getElementById(panel_id);
+  if (!el) return;
+  el.classList.remove(css_class);
+  void el.offsetWidth; // force reflow so animation restarts
+  el.classList.add(css_class);
+  setTimeout(() => el.classList.remove(css_class), 700);
 }
 
 function render_big_bad(state) {
@@ -104,6 +138,19 @@ function render_big_bad(state) {
   document.getElementById('bb-hp').textContent   = `${bb.hp}/${bb.max_hp}`;
   document.getElementById('bb-atk').textContent  = bb.atk;
   document.getElementById('bb-mpt').textContent  = bb.monsters_per_turn;
+
+  // HP bar
+  const pct = Math.max(0, (bb.hp / bb.max_hp) * 100);
+  const bar  = document.getElementById('bb-hp-bar');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.className   = 'hp-bar' + (pct < 15 ? ' critical' : pct < 35 ? ' low' : '');
+  }
+
+  // Damage flash
+  if (_prev_bb_hp !== null && bb.hp < _prev_bb_hp) flash_panel('bb-panel', 'damage-flash-red');
+  _prev_bb_hp = bb.hp;
+
   paint_sprite_scaled(document.getElementById('bb-sprite'), big_bad_art[bb.id], 64, 64);
 }
 
@@ -119,6 +166,21 @@ function render_city(state) {
 
   const effective = _get_effective_market_size(state);
   document.getElementById('city-market-size').textContent = `${effective}/${FIELD_SIZE_MAX}`;
+
+  // Morale bar
+  const morale_pct = Math.max(0, (state.fight.city_morale / city.max_morale) * 100);
+  const bar        = document.getElementById('city-morale-bar');
+  if (bar) {
+    bar.style.width = morale_pct + '%';
+    bar.className   = 'hp-bar morale-bar' + (morale_pct < 15 ? ' critical' : morale_pct < 35 ? ' low' : '');
+  }
+
+  // Morale flash
+  if (_prev_city_morale !== null) {
+    if (state.fight.city_morale < _prev_city_morale) flash_panel('city-panel', 'damage-flash-red');
+    else if (state.fight.city_morale > _prev_city_morale) flash_panel('city-panel', 'damage-flash-green');
+  }
+  _prev_city_morale = state.fight.city_morale;
 
   paint_sprite_scaled(document.getElementById('city-sprite'), city_art[city.id], 64, 64);
 }
@@ -297,7 +359,7 @@ function make_market_active_slot(state, i) {
     el.style.cursor = 'default';
     return el;
   }
-  const recruit_cost = _get_card_cost(card, state.fight.city);
+  const recruit_cost = Math.max(1, _get_card_cost(card, state.fight.city) - (state.turn.cost_reduce_next ?? 0));
   const can_afford   = state.fight.gold_pool >= recruit_cost;
   const el           = make_card_element(card, false, false, recruit_cost);
   if (can_afford) {
@@ -588,6 +650,10 @@ export function show_screen(screen_id) {
 // ─────────────────────────────────────────────────────────────
 
 export function show_prefight_screen(state) {
+  // Reset flash-tracking so a new fight never inherits the previous fight's values.
+  _prev_bb_hp       = null;
+  _prev_city_morale = null;
+
   const bb   = state.fight.big_bad;
   const city = state.fight.city;
 

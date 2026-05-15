@@ -616,6 +616,7 @@ function begin_resolution(state) {
   state.turn.active_resolution_sequence = build_resolution_sequence(state);
 
   _renderer.log_phase('-- Resolution --');
+  _renderer.render();
   schedule_next_resolve_step(state);
 }
 
@@ -732,11 +733,19 @@ function resolve_current_step(state, side, slot) {
   if (side === 'H') {
     const card = state.fight.hero_field[slot];
     if (!card) return;
+    if (card.corrupted) {
+      _renderer.log_entry(`${card.name} is corrupted — does nothing this turn.`, 'log-monster');
+      return;
+    }
     if (card.active) resolve_hero_card(state, card, slot);
     else _renderer.log_entry(`${card.name} is inactive — skipped.`, 'log-effect');
   } else {
     const card = state.fight.monster_field[slot];
     if (!card) return;
+    if (card.corrupted) {
+      _renderer.log_entry(`${card.name} is corrupted — does nothing this turn.`, 'log-effect');
+      return;
+    }
     if (card.active) resolve_monster_card(state, card, slot);
     else _renderer.log_entry(`${card.name} is inactive — skipped.`, 'log-effect');
   }
@@ -755,16 +764,52 @@ function resolve_hero_card(state, card, slot_index) {
   card.temp_atk_mod = 0;
 
   if (effective_atk > 0) {
-    const shield_absorbed    = Math.min(state.fight.monster_shield, effective_atk);
-    const damage_dealt       = effective_atk - shield_absorbed;
-    state.fight.monster_shield = Math.max(0, state.fight.monster_shield - shield_absorbed);
-    if (damage_dealt > 0) {
-      big_bad.hp = Math.max(0, big_bad.hp - damage_dealt);
-      _renderer.log_entry(`${card.name} deals ${damage_dealt} ${card.atk_type} dmg to ${big_bad.name}.`, 'log-hero');
-      card.resolution_pips.push({ type: atk_type_from_role(card.atk_type), value: damage_dealt });
+    // Multistrike fires the same ATK N times; each strike absorbs shield
+    // independently, which makes a small-but-multistrike card a great
+    // shield-stripper. _pierce skips shield entirely. Aggregated for one log line.
+    const strikes = Math.max(1, card._multistrike ?? 1);
+    let total_damage  = 0;
+    let total_blocked = 0;
+    for (let s = 0; s < strikes; s++) {
+      const shield_absorbed = card._pierce
+        ? 0 : Math.min(state.fight.monster_shield, effective_atk);
+      const damage_dealt    = effective_atk - shield_absorbed;
+      state.fight.monster_shield = Math.max(0, state.fight.monster_shield - shield_absorbed);
+      total_blocked += shield_absorbed;
+      if (damage_dealt > 0) {
+        big_bad.hp = Math.max(0, big_bad.hp - damage_dealt);
+        total_damage += damage_dealt;
+      }
+      if (big_bad.hp <= 0) break;
+    }
+
+    const strike_tag = strikes > 1 ? ` (×${strikes})` : '';
+    const pierce_tag = card._pierce ? ' (pierce)' : '';
+    if (total_damage > 0) {
+      _renderer.log_entry(`${card.name} deals ${total_damage}${strike_tag} ${card.atk_type} dmg to ${big_bad.name}${pierce_tag}.`, 'log-hero');
+      card.resolution_pips.push({ type: atk_type_from_role(card.atk_type), value: total_damage });
     } else {
-      _renderer.log_entry(`${card.name}: ATK fully absorbed by monster shield.`, 'log-hero');
-      card.resolution_pips.push({ type: 'blocked', value: effective_atk });
+      _renderer.log_entry(`${card.name}: ATK fully absorbed by monster shield${strike_tag}.`, 'log-hero');
+      card.resolution_pips.push({ type: 'blocked', value: total_blocked });
+    }
+
+    // Bulwark converts shield-absorbed damage into city Defence —
+    // turns "useless" attacks against shielded monsters into protection.
+    if (card._bulwark && total_blocked > 0) {
+      state.fight.city_def += total_blocked;
+      _renderer.log_entry(`${card.name}: bulwark — ${total_blocked} blocked → Defence.`, 'log-effect');
+      card.resolution_pips.push({ type: 'shield', value: total_blocked });
+    }
+
+    // Lifesteal heals the city for damage dealt to the Big Bad.
+    if (card._lifesteal && total_damage > 0) {
+      const cap    = state.fight.city.max_morale - state.fight.city_morale;
+      const healed = Math.min(total_damage, cap);
+      if (healed > 0) {
+        state.fight.city_morale += healed;
+        _renderer.log_entry(`${card.name}: lifesteal — restored ${healed} Morale.`, 'log-morale');
+        card.resolution_pips.push({ type: 'morale', value: healed });
+      }
     }
   }
 
@@ -799,7 +844,7 @@ function resolve_hero_card(state, card, slot_index) {
  * future spatial monster effects (opposite, adjacent) can be supported
  * without changing the call site.
  */
-function resolve_monster_card(state, card, slot_index) {  // eslint-disable-line no-unused-vars
+function resolve_monster_card(state, card, slot_index) {
   const effective_atk = card.atk + card.temp_atk_mod;
 
   if (effective_atk > 0) {
@@ -833,6 +878,13 @@ function resolve_monster_card(state, card, slot_index) {  // eslint-disable-line
     card.resolution_pips.push({ type: 'drain', value: drain });
   }
 
+  if (card.morale < 0) {
+    const drain = Math.abs(card.morale);
+    state.fight.city_morale = Math.max(0, state.fight.city_morale - drain);
+    _renderer.log_entry(`${card.name}: -${drain} City Morale drained.`, 'log-monster');
+    card.resolution_pips.push({ type: 'morale-neg', value: card.morale });
+  }
+
   if (card.subtype !== 'atk') {
     for (const effect of card.effects) {
       apply_monster_effect(state, effect, card, slot_index);
@@ -853,7 +905,13 @@ function finish_resolution(state) {
     if (!card) return;
     card.active   = false;
     card.resolved = false;
-    state.run.discard.push(card);
+    // _scrap_after_resolve (set by the 'scrap_self' effect) banishes the card
+    // from the run instead of returning it to the discard pile.
+    if (card._scrap_after_resolve) {
+      _renderer.log_entry(`${card.name} is banished from your deck.`, 'log-effect');
+    } else {
+      state.run.discard.push(card);
+    }
     state.fight.hero_field[i] = null;
   });
 
@@ -894,6 +952,8 @@ export function on_market_card_click(uid) {
   if (idx === -1) return;
 
   const card         = state.fight.market[idx];
+  // get_card_cost already floors heroes at 1 via city discount; this outer
+  // Math.max(1) catches over-discounting from cost_reduce_next effects.
   const recruit_cost = Math.max(1, get_card_cost(card, state.fight.city) - state.turn.cost_reduce_next);
 
   if (state.fight.gold_pool < recruit_cost) { _renderer.flash_notification('Not enough Gold!'); return; }

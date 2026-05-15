@@ -63,32 +63,41 @@
     <div id="fight-stats">
       <!-- Big Bad panel -->
       <div class="entity-panel" id="bb-panel">
-        <canvas id="bb-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
-        <div class="entity-info">
-          <div class="entity-name" id="bb-name">--</div>
-          <div class="entity-sub" id="bb-sub">--</div>
-          <div class="entity-stats">
-            <div class="stat-pill hp">&#9829; <span id="bb-hp">--</span></div>
-            <div class="stat-pill atk">&#9876; <span id="bb-atk">--</span></div>
-            <div class="stat-pill mon">&#9760; <span id="bb-mpt">--</span>/turn</div>
+        <div class="entity-panel-top">
+          <canvas id="bb-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
+          <div class="entity-info">
+            <div class="entity-name" id="bb-name">--</div>
+            <div class="entity-sub" id="bb-sub">--</div>
+            <div class="entity-stats">
+              <div class="stat-pill hp">&#9829; <span id="bb-hp">--</span></div>
+              <div class="stat-pill atk">&#9876; <span id="bb-atk">--</span></div>
+              <div class="stat-pill mon">&#9760; <span id="bb-mpt">--</span>/turn</div>
+            </div>
           </div>
         </div>
+        <div class="hp-bar-wrap"><div class="hp-bar" id="bb-hp-bar" style="width:100%"></div></div>
       </div>
       <!-- City panel -->
       <div class="entity-panel" id="city-panel">
-        <canvas id="city-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
-        <div class="entity-info">
-          <div class="entity-name" id="city-name">--</div>
-          <div class="entity-sub" id="city-sub">--</div>
-          <div class="entity-stats">
-            <div class="stat-pill mor">&#9873; <span id="city-morale">--</span></div>
-            <div class="stat-pill def">&#128737; <span id="city-def-display">0</span></div>
-            <div class="stat-pill mkt">&#127968; <span id="city-market-size">--</span></div>
+        <div class="entity-panel-top">
+          <canvas id="city-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
+          <div class="entity-info">
+            <div class="entity-name" id="city-name">--</div>
+            <div class="entity-sub" id="city-sub">--</div>
+            <div class="entity-stats">
+              <div class="stat-pill mor">&#9873; <span id="city-morale">--</span></div>
+              <div class="stat-pill def">&#128737; <span id="city-def-display">0</span></div>
+              <div class="stat-pill mkt">&#127968; <span id="city-market-size">--</span></div>
+            </div>
+            <div class="entity-effects-mini" id="city-effects-mini">--</div>
           </div>
-          <div class="entity-effects-mini" id="city-effects-mini">--</div>
         </div>
+        <div class="hp-bar-wrap"><div class="hp-bar morale-bar" id="city-morale-bar" style="width:100%"></div></div>
       </div>
-      <div id="turn-counter">TURN <span id="turn-num">1</span></div>
+      <div class="fight-turn-info">
+        <div id="turn-counter">TURN <span id="turn-num">1</span></div>
+        <div id="phase-indicator">DRAW</div>
+      </div>
     </div>
 
     <!-- Board -->
@@ -172,7 +181,6 @@
           <span class="gold-icon">&#9830;</span>
           <span class="gold-val" id="gold-val">0</span>
           <span class="gold-label">GOLD</span>
-          <span class="gold-spent" id="gold-spent"></span>
         </div>
       </div>
       <div id="phase-bar">
@@ -236,11 +244,11 @@
     cards_market.js    — calls Registry.register_cards_market()
     cards_upgrades.js  — calls Registry.register_cards_upgrades()
     cards_monster.js   — calls Registry.register_cards_monster(tier, [...])
-    big_bads.js        — calls Registry.register_big_bads(tier, [...])
-    cities.js          — calls Registry.register_cities()
+    01_data_enemies.js — calls Registry.register_big_bads(tier, [...])
+    01_data_levels.js  — calls Registry.register_cities()
 
   ES module (deferred, single entry point):
-    startup_validator.js — type="module"; imports engine, renderer, constants, app.
+    04_boot_main.js    — type="module"; imports engine, renderer, constants, app.
                            Runs on DOMContentLoaded after all classic scripts have run.
                            Wires the engine→renderer bridge, validates data, gates
                            Begin Run, and attaches event listeners.

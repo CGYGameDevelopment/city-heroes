@@ -3,7 +3,7 @@
 // City effects are always-on. Conditional auto-triggers are not yet implemented —
 // all effects use trigger: 'always_on'. Do not add engine logic to this file.
 
-var cities = [
+const cities = [
 
   {
     id:                 'stonehaven',

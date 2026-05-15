@@ -55,6 +55,29 @@ export function init_effects_bridge(fns) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// PRIVATE HELPERS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Draw `count` cards from the deck into the hand, reshuffling the discard
+ * pile if the deck runs out mid-draw.  Returns the number actually drawn.
+ */
+function draw_cards_into_hand(state, count) {
+  let drawn = 0;
+  for (let i = 0; i < count; i++) {
+    if (state.run.deck.length === 0) {
+      if (state.run.discard.length === 0) break;
+      state.run.deck    = _shuffle_array(state.run.discard);
+      state.run.discard = [];
+      _log_entry('Deck reshuffled from discard.', 'log-phase');
+    }
+    state.run.hand.push(state.run.deck.pop());
+    drawn++;
+  }
+  return drawn;
+}
+
+// ─────────────────────────────────────────────────────────────
 // HERO EFFECT HANDLERS
 // source_card  — the hero card that carries the effect
 // slot_index   — the hero field slot of source_card
@@ -267,18 +290,7 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
 
     // ── draw ──────────────────────────────────────────────────
     case 'draw': {
-      const count = effect.amount ?? 1;
-      let drawn = 0;
-      for (let i = 0; i < count; i++) {
-        if (state.run.deck.length === 0) {
-          if (state.run.discard.length === 0) break;
-          state.run.deck    = _shuffle_array(state.run.discard);
-          state.run.discard = [];
-          _log_entry('Deck reshuffled from discard.', 'log-phase');
-        }
-        state.run.hand.push(state.run.deck.pop());
-        drawn++;
-      }
+      const drawn = draw_cards_into_hand(state, effect.amount ?? 1);
       if (drawn > 0) _log_entry(`${source_card.name}: drew ${drawn} card(s).`, 'log-effect');
       else           _log_entry(`${source_card.name}: draw — no cards available.`, 'log-effect');
       break;
@@ -313,6 +325,207 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
     case 'cost_reduce': {
       state.turn.cost_reduce_next += effect.amount;
       _log_entry(`${source_card.name}: next recruit costs ${effect.amount} less Gold.`, 'log-effect');
+      break;
+    }
+
+    // ── ally_bonus ────────────────────────────────────────────
+    // Star-Realms-style faction synergy. Counts heroes (including self) in the
+    // hero_field whose role matches effect.role. If count >= effect.threshold,
+    // applies effect.amount to effect.stat ('atk' = self only, others = global).
+    case 'ally_bonus': {
+      const target_role = effect.role ?? source_card.role;
+      const threshold   = effect.threshold ?? 2;
+      const ally_count  = state.fight.hero_field
+        .filter(c => c && c.role === target_role).length;
+      if (ally_count < threshold) {
+        _log_entry(`${source_card.name}: ally bonus — needs ${threshold} ${target_role} (have ${ally_count}).`, 'log-effect');
+        break;
+      }
+      if (effect.stat === 'atk') {
+        source_card.temp_atk_mod += effect.amount;
+        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} ATK (${ally_count} ${target_role})!`, 'log-effect');
+      } else if (effect.stat === 'gold') {
+        state.fight.gold_pool += effect.amount;
+        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} Gold!`, 'log-effect');
+      } else if (effect.stat === 'shield') {
+        state.fight.city_def += effect.amount;
+        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} Defence!`, 'log-effect');
+      } else if (effect.stat === 'morale') {
+        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + effect.amount);
+        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} Morale!`, 'log-effect');
+      }
+      break;
+    }
+
+    // ── combo_bonus ───────────────────────────────────────────
+    // Triggers when a hero matching effect.requires/value has already RESOLVED
+    // earlier this turn. Heroes resolve left→right, so placement order is the
+    // strategic lever. requires: 'role' | 'type'. Excludes source card itself.
+    case 'combo_bonus': {
+      const match_field = effect.requires === 'type' ? 'type' : 'role';
+      const target_val  = effect.value;
+      const matched = state.fight.hero_field.find(c =>
+        c && c.uid !== source_card.uid && c.resolved && c[match_field] === target_val
+      );
+      if (!matched) {
+        _log_entry(`${source_card.name}: combo — needs prior ${target_val} hero this turn.`, 'log-effect');
+        break;
+      }
+      if (effect.stat === 'atk') {
+        source_card.temp_atk_mod += effect.amount;
+        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} ATK!`, 'log-effect');
+      } else if (effect.stat === 'gold') {
+        state.fight.gold_pool += effect.amount;
+        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} Gold!`, 'log-effect');
+      } else if (effect.stat === 'shield') {
+        state.fight.city_def += effect.amount;
+        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} Defence!`, 'log-effect');
+      } else if (effect.stat === 'morale') {
+        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + effect.amount);
+        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} Morale!`, 'log-effect');
+      } else if (effect.stat === 'draw') {
+        const drawn = draw_cards_into_hand(state, effect.amount ?? 1);
+        _log_entry(`${source_card.name}: combo with ${matched.name} — drew ${drawn}!`, 'log-effect');
+      }
+      break;
+    }
+
+    // ── chain_bonus ───────────────────────────────────────────
+    // Scaling combo. Counts every hero matching effect.requires/value that has
+    // already RESOLVED earlier this turn (excludes self), and applies
+    // effect.amount per match. Heroes resolve left→right, so stacking them in
+    // order produces escalating bursts.
+    case 'chain_bonus': {
+      const match_field = effect.requires === 'type' ? 'type' : 'role';
+      const target_val  = effect.value;
+      const matches = state.fight.hero_field.filter(c =>
+        c && c.uid !== source_card.uid && c.resolved && c[match_field] === target_val
+      );
+      if (matches.length === 0) {
+        _log_entry(`${source_card.name}: chain — no prior ${target_val} this turn.`, 'log-effect');
+        break;
+      }
+      const total = effect.amount * matches.length;
+      if (effect.stat === 'atk') {
+        source_card.temp_atk_mod += total;
+        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} ATK!`, 'log-effect');
+      } else if (effect.stat === 'gold') {
+        state.fight.gold_pool += total;
+        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} Gold!`, 'log-effect');
+      } else if (effect.stat === 'shield') {
+        state.fight.city_def += total;
+        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} Defence!`, 'log-effect');
+      } else if (effect.stat === 'morale') {
+        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + total);
+        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} Morale!`, 'log-effect');
+      }
+      break;
+    }
+
+    // ── multistrike ───────────────────────────────────────────
+    // Card's ATK fires N times this resolution. Each strike absorbs shield
+    // independently — great for shield-stripping. Engine reads _multistrike.
+    case 'multistrike': {
+      source_card._multistrike = effect.count ?? 2;
+      break;
+    }
+
+    // ── lifesteal ─────────────────────────────────────────────
+    // Heal city Morale equal to the damage this card dealt to the Big Bad.
+    // Engine reads _lifesteal during ATK resolution.
+    case 'lifesteal': {
+      source_card._lifesteal = true;
+      break;
+    }
+
+    // ── bulwark ───────────────────────────────────────────────
+    // Damage absorbed by monster shield is converted into city Defence.
+    // Engine reads _bulwark during ATK resolution.
+    case 'bulwark': {
+      source_card._bulwark = true;
+      break;
+    }
+
+    // ── scaling_atk ───────────────────────────────────────────
+    // Adds floor(state_value / divisor) to source card's ATK this turn.
+    // sources: 'gold_pool', 'city_def', 'hand_size', 'monster_shield',
+    //          'city_morale_lost' (max - current).
+    case 'scaling_atk': {
+      const divisor = Math.max(1, effect.divisor ?? 1);
+      let raw_value = 0;
+      switch (effect.source) {
+        case 'gold_pool':        raw_value = state.fight.gold_pool; break;
+        case 'city_def':         raw_value = state.fight.city_def; break;
+        case 'hand_size':        raw_value = state.run.hand.length; break;
+        case 'monster_shield':   raw_value = state.fight.monster_shield; break;
+        case 'city_morale_lost': raw_value = state.fight.city.max_morale - state.fight.city_morale; break;
+        default:
+          console.warn(`scaling_atk: unknown source '${effect.source}' on '${source_card.id}'.`);
+          break;
+      }
+      const bonus = Math.floor(raw_value / divisor);
+      source_card.temp_atk_mod += bonus;
+      _log_entry(`${source_card.name}: scaling — +${bonus} ATK (${effect.source}=${raw_value}).`, 'log-effect');
+      break;
+    }
+
+    // ── sacrifice ─────────────────────────────────────────────
+    // Permanently scraps an adjacent hero in your field, in exchange for a
+    // big bonus. target: 'adjacent_starter' | 'adjacent_any'. Encourages
+    // sticking weak starters next to your power cards on purpose.
+    case 'sacrifice': {
+      const adjacent_indices = [slot_index - 1, slot_index + 1]
+        .filter(i => i >= 0 && i < state.fight.hero_field.length);
+      const candidates = adjacent_indices
+        .map(i => ({ idx: i, card: state.fight.hero_field[i] }))
+        .filter(({ card }) => {
+          if (!card) return false;
+          if (effect.target === 'adjacent_starter') return card.type === 'starter';
+          return true;  // 'adjacent_any'
+        });
+      if (candidates.length === 0) {
+        _log_entry(`${source_card.name}: sacrifice — no adjacent target.`, 'log-effect');
+        break;
+      }
+      const chosen = _pick_random(candidates);
+      // Banish from the run entirely.
+      state.run.deck    = state.run.deck.filter(c => c.uid !== chosen.card.uid);
+      state.run.hand    = state.run.hand.filter(c => c.uid !== chosen.card.uid);
+      state.run.discard = state.run.discard.filter(c => c.uid !== chosen.card.uid);
+      state.fight.hero_field[chosen.idx] = null;
+      _log_entry(`${source_card.name}: sacrificed ${chosen.card.name}!`, 'log-effect');
+
+      if (effect.stat === 'atk') {
+        source_card.temp_atk_mod += effect.amount;
+        _log_entry(`${source_card.name}: +${effect.amount} ATK from sacrifice.`, 'log-effect');
+      } else if (effect.stat === 'gold') {
+        state.fight.gold_pool += effect.amount;
+        _log_entry(`${source_card.name}: +${effect.amount} Gold from sacrifice.`, 'log-effect');
+      } else if (effect.stat === 'morale') {
+        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + effect.amount);
+        _log_entry(`${source_card.name}: +${effect.amount} Morale from sacrifice.`, 'log-effect');
+      } else if (effect.stat === 'shield') {
+        state.fight.city_def += effect.amount;
+        _log_entry(`${source_card.name}: +${effect.amount} Defence from sacrifice.`, 'log-effect');
+      }
+      break;
+    }
+
+    // ── scrap_self ────────────────────────────────────────────
+    // Marks the card to be permanently removed from the run after resolution
+    // instead of going to discard. Star-Realms-style one-shot. Engine reads
+    // _scrap_after_resolve in finish_resolution().
+    case 'scrap_self': {
+      source_card._scrap_after_resolve = true;
+      _log_entry(`${source_card.name}: spent — banished from your deck.`, 'log-effect');
+      break;
+    }
+
+    // ── pierce ────────────────────────────────────────────────
+    // This card's ATK ignores monster shield. Engine reads _pierce in
+    // resolve_hero_card() when computing shield absorption.
+    case 'pierce': {
+      source_card._pierce = true;
       break;
     }
 
@@ -378,8 +591,37 @@ function find_next_pending_step(state, target_side) {
 // slot_index   — the monster field slot of source_card (for future spatial effects)
 // ─────────────────────────────────────────────────────────────
 
-export function apply_monster_effect(state, effect, source_card, slot_index = 0) {  // eslint-disable-line no-unused-vars
+export function apply_monster_effect(state, effect, source_card, _slot_index = 0) {
   switch (effect.type) {
+
+    // ── corrupt ──────────────────────────────────────────────
+    // Marks N random non-corrupted cards across the player's deck/hand/discard
+    // as corrupted. Corrupted cards skip resolution entirely (no stats, no
+    // effects). The 'cleanse' hero effect removes the flag.
+    case 'corrupt': {
+      const count = effect.count ?? 1;
+      const all_cards = [
+        ...state.run.deck, ...state.run.hand, ...state.run.discard,
+      ].filter(c => c && !c.corrupted);
+      if (all_cards.length === 0) {
+        _log_entry(`${source_card.name}: corrupt — no eligible cards.`, 'log-monster');
+        break;
+      }
+      const shuffled = _shuffle_array(all_cards).slice(0, count);
+      for (const c of shuffled) c.corrupted = true;
+      _log_entry(`${source_card.name}: corrupted ${shuffled.length} of your cards!`, 'log-monster');
+      break;
+    }
+
+    // ── enrage ───────────────────────────────────────────────
+    // Permanently buffs the Big Bad's ATK by effect.amount for the rest of
+    // the fight. Stacks. Compounds quickly if not silenced.
+    case 'enrage': {
+      const amt = effect.amount ?? 1;
+      state.fight.big_bad.atk += amt;
+      _log_entry(`${source_card.name}: ${state.fight.big_bad.name} enraged — ATK permanently +${amt}!`, 'log-monster');
+      break;
+    }
 
     // ── kill ─────────────────────────────────────────────────
     case 'kill': {

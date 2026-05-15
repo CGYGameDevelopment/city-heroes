@@ -16,9 +16,9 @@ export const MONSTER_SLOTS          = 5;
 export const UPGRADE_CHOICE_COUNT   = 3;
 export const LOG_MAX_ENTRIES        = 28;
 export const FIGHTS_PER_RUN         = 3;
-export const DRAW_PHASE_DELAY_MS    = 500;
-export const RESOLVE_STEP_DELAY_MS  = 700;
-export const FIGHT_END_DELAY_MS     = 1200;
+export const DRAW_PHASE_DELAY_MS    = 700;
+export const RESOLVE_STEP_DELAY_MS  = 1200;
+export const FIGHT_END_DELAY_MS     = 1600;
 /** Delay between Big Bad phase completing and Heroes phase becoming active. */
 export const BIG_BAD_PHASE_DELAY_MS = DRAW_PHASE_DELAY_MS;
 export const MARKET_LEVEL_START     = 2;
