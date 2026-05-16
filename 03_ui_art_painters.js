@@ -444,6 +444,53 @@ const big_bad_art = {
     paint_pixel(0,5,flame); paint_pixel(17,6,flame); paint_pixel(1,12,flame); paint_pixel(17,13,flame);
   },
 
+  dread_hydra(canvas) {
+    const canvas_ctx = canvas.getContext('2d');
+    const paint_pixel = make_pixel_painter(canvas_ctx);
+    canvas_ctx.clearRect(0, 0, SPRITE_NATIVE_SIZE, SPRITE_NATIVE_SIZE);
+    const scale = '#2a6a4a', dark_scale = '#0a3a1a', belly = '#5aaa7a', plague = '#88cc00', eye = '#ffee44', fang = '#eeeecc', water = '#1a3a4a';
+
+    for (let grid_x = 0; grid_x <= SPRITE_GRID_MAX_INDEX; grid_x++) {
+      for (let grid_y = 14; grid_y <= SPRITE_GRID_MAX_INDEX; grid_y++) paint_pixel(grid_x, grid_y, water);
+    }
+    for (let grid_x = 0; grid_x <= SPRITE_GRID_MAX_INDEX; grid_x += 3) paint_pixel(grid_x, 14, '#2a5a6a');
+
+    for (let grid_x = 6; grid_x <= 11; grid_x++) for (let grid_y = 11; grid_y <= 15; grid_y++) paint_pixel(grid_x, grid_y, scale);
+    for (let grid_x = 7; grid_x <= 10; grid_x++) paint_pixel(grid_x, 13, belly);
+    paint_pixel(6, 11, dark_scale); paint_pixel(11, 11, dark_scale);
+    paint_pixel(7, 14, plague); paint_pixel(10, 14, plague);
+
+    paint_pixel(3, 9, scale); paint_pixel(3, 10, scale);
+    paint_pixel(4, 8, scale); paint_pixel(4, 9, scale);
+    paint_pixel(5, 7, scale); paint_pixel(5, 8, scale);
+    paint_pixel(6, 6, scale); paint_pixel(6, 7, scale);
+    paint_pixel(2, 4, scale); paint_pixel(3, 4, scale); paint_pixel(4, 4, scale); paint_pixel(2, 5, scale); paint_pixel(3, 5, scale); paint_pixel(4, 5, scale); paint_pixel(2, 6, scale); paint_pixel(3, 6, scale);
+    paint_pixel(2, 3, dark_scale); paint_pixel(4, 3, dark_scale);
+    paint_pixel(3, 5, eye);
+    paint_pixel(1, 6, fang); paint_pixel(2, 7, fang);
+    paint_pixel(4, 6, plague);
+
+    paint_pixel(9, 6, scale); paint_pixel(9, 7, scale); paint_pixel(9, 8, scale); paint_pixel(9, 9, scale); paint_pixel(9, 10, scale);
+    paint_pixel(8, 2, scale); paint_pixel(9, 2, scale); paint_pixel(10, 2, scale); paint_pixel(8, 3, scale); paint_pixel(9, 3, scale); paint_pixel(10, 3, scale); paint_pixel(8, 4, scale); paint_pixel(9, 4, scale); paint_pixel(10, 4, scale);
+    paint_pixel(8, 1, dark_scale); paint_pixel(10, 1, dark_scale);
+    paint_pixel(8, 3, eye); paint_pixel(10, 3, eye);
+    paint_pixel(9, 5, fang);
+    paint_pixel(7, 4, plague); paint_pixel(11, 4, plague);
+
+    paint_pixel(14, 9, scale); paint_pixel(14, 10, scale);
+    paint_pixel(13, 8, scale); paint_pixel(13, 9, scale);
+    paint_pixel(12, 7, scale); paint_pixel(12, 8, scale);
+    paint_pixel(11, 6, scale); paint_pixel(11, 7, scale);
+    paint_pixel(13, 4, scale); paint_pixel(14, 4, scale); paint_pixel(15, 4, scale); paint_pixel(13, 5, scale); paint_pixel(14, 5, scale); paint_pixel(15, 5, scale); paint_pixel(14, 6, scale); paint_pixel(15, 6, scale);
+    paint_pixel(13, 3, dark_scale); paint_pixel(15, 3, dark_scale);
+    paint_pixel(14, 5, eye);
+    paint_pixel(15, 7, fang); paint_pixel(16, 6, fang);
+    paint_pixel(13, 6, plague);
+
+    paint_pixel(0, 12, scale); paint_pixel(1, 13, scale); paint_pixel(17, 13, scale); paint_pixel(16, 12, scale);
+    paint_pixel(8, 16, dark_scale); paint_pixel(9, 16, dark_scale); paint_pixel(10, 16, dark_scale);
+  },
+
   lich_sovereign(canvas) {
     const canvas_ctx = canvas.getContext('2d');
     const paint_pixel = make_pixel_painter(canvas_ctx);

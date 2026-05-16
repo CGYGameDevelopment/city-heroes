@@ -41,6 +41,7 @@ const VALID_EFFECT_TYPES     = new Set([
   'weaken_atk', 'stat_mod_all', 'kill_monster', 'cleanse', 'kill',
   'haste', 'slow', 'stop',
   'draw', 'scrap', 'cost_reduce', 'field_bonus',
+  'ally_bonus', 'combo_bonus', 'pierce',
 
   'gain_gold', 'gain_morale', 'gain_shield', 'damage', 'summon_ally',
 ]);

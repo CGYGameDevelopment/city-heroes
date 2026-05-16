@@ -402,6 +402,77 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
       break;
     }
 
+    case 'ally_bonus': {
+      const required_role  = effect.role;
+      const required_count = effect.threshold ?? DEFAULT_FIELD_COUNT_THRESHOLD;
+      const matching_count = state.fight.hero_field.filter(
+        field_card => field_card && field_card.uid !== source_card.uid && field_card.role === required_role
+      ).length;
+      if (matching_count < required_count) {
+        _log_entry(`${source_card.name}: ally bonus — need ${required_count} ${required_role} hero(es), have ${matching_count}.`, 'log-effect');
+        break;
+      }
+      const bonus_amount = effect.amount;
+      if (effect.stat === 'atk') {
+        source_card.temp_atk_mod += bonus_amount;
+        _log_entry(`${source_card.name}: ally bonus — +${bonus_amount} ATK!`, 'log-effect');
+      } else if (effect.stat === 'gold') {
+        state.fight.gold_pool += bonus_amount;
+        _log_entry(`${source_card.name}: ally bonus — +${bonus_amount} Gold!`, 'log-effect');
+      } else if (effect.stat === 'shield') {
+        state.fight.city_def += bonus_amount;
+        _log_entry(`${source_card.name}: ally bonus — +${bonus_amount} Defence!`, 'log-effect');
+      } else if (effect.stat === 'morale') {
+        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + bonus_amount);
+        _log_entry(`${source_card.name}: ally bonus — +${bonus_amount} Morale!`, 'log-effect');
+      } else {
+        console.warn(`ally_bonus: unhandled stat '${effect.stat}' on card '${source_card.id}'.`);
+      }
+      break;
+    }
+
+    case 'combo_bonus': {
+      const match_field = effect.requires ?? 'role';
+      const match_value = effect.value;
+      const has_combo = state.fight.hero_field.some(
+        field_card =>
+          field_card &&
+          field_card.uid !== source_card.uid &&
+          field_card.resolved &&
+          field_card[match_field] === match_value
+      );
+      if (!has_combo) {
+        _log_entry(`${source_card.name}: combo — no prior ${match_value} hero resolved this turn.`, 'log-effect');
+        break;
+      }
+      const bonus_amount = effect.amount;
+      if (effect.stat === 'atk') {
+        source_card.temp_atk_mod += bonus_amount;
+        _log_entry(`${source_card.name}: combo bonus — +${bonus_amount} ATK!`, 'log-effect');
+      } else if (effect.stat === 'gold') {
+        state.fight.gold_pool += bonus_amount;
+        _log_entry(`${source_card.name}: combo bonus — +${bonus_amount} Gold!`, 'log-effect');
+      } else if (effect.stat === 'shield') {
+        state.fight.city_def += bonus_amount;
+        _log_entry(`${source_card.name}: combo bonus — +${bonus_amount} Defence!`, 'log-effect');
+      } else if (effect.stat === 'morale') {
+        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + bonus_amount);
+        _log_entry(`${source_card.name}: combo bonus — +${bonus_amount} Morale!`, 'log-effect');
+      } else {
+        console.warn(`combo_bonus: unhandled stat '${effect.stat}' on card '${source_card.id}'.`);
+      }
+      break;
+    }
+
+    case 'pierce': {
+      if (!source_card.keywords) source_card.keywords = [];
+      if (!source_card.keywords.includes('pierce')) {
+        source_card.keywords.push('pierce');
+      }
+      _log_entry(`${source_card.name}: attack pierces shield!`, 'log-effect');
+      break;
+    }
+
     case 'summon_ally': {
       const ally_def = _find_card_def_by_id(effect.card_id);
       if (!ally_def) {
