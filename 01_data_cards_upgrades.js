@@ -118,7 +118,7 @@ const cards_upgrades = [
     morale:   0,
     shield:   0,
     effects:  [
-      { type: 'stat_mod_all', stat: 'atk', amount: 2, duration: 'turn' },
+      { type: 'stat_mod_all', stat: 'atk', amount: 2 },
     ],
     desc:     "Battlerager Siege Master — every blow rallies the line. Deal 8 Physical damage. All Heroes gain +2 ATK this turn.",
     art:      make_art_painter('physical'),

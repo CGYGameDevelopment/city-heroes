@@ -317,6 +317,11 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
       state.run.hand    = state.run.hand.filter(c => c.uid !== scrapped.uid);
       state.run.discard = state.run.discard.filter(c => c.uid !== scrapped.uid);
       state.run.deck    = state.run.deck.filter(c => c.uid !== scrapped.uid);
+      // Also drop from recruits_owned so a hero scrap is permanent across fights.
+      if (Array.isArray(state.run.recruits_owned)) {
+        const ridx = state.run.recruits_owned.indexOf(scrapped.id);
+        if (ridx !== -1) state.run.recruits_owned.splice(ridx, 1);
+      }
       _log_entry(`${source_card.name}: ${scrapped.name} scrapped permanently!`, 'log-effect');
       break;
     }
@@ -473,6 +478,10 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
     // Permanently scraps an adjacent hero in your field, in exchange for a
     // big bonus. target: 'adjacent_starter' | 'adjacent_any'. Encourages
     // sticking weak starters next to your power cards on purpose.
+    //
+    // Target selection is deterministic: always pick the *lowest cost* adjacent
+    // candidate. This prevents the unpleasant case where 'adjacent_any' randomly
+    // banishes the player's Phoenix Blade. Ties broken by left-most slot.
     case 'sacrifice': {
       const adjacent_indices = [slot_index - 1, slot_index + 1]
         .filter(i => i >= 0 && i < state.fight.hero_field.length);
@@ -487,12 +496,19 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
         _log_entry(`${source_card.name}: sacrifice — no adjacent target.`, 'log-effect');
         break;
       }
-      const chosen = _pick_random(candidates);
-      // Banish from the run entirely.
+      // Sort by cost ascending; ties broken by slot index (left-first).
+      candidates.sort((a, b) => (a.card.cost - b.card.cost) || (a.idx - b.idx));
+      const chosen = candidates[0];
+      // Banish from the run entirely. Also drop from recruits_owned so a
+      // sacrificed hero doesn't reappear in the next fight's deck.
       state.run.deck    = state.run.deck.filter(c => c.uid !== chosen.card.uid);
       state.run.hand    = state.run.hand.filter(c => c.uid !== chosen.card.uid);
       state.run.discard = state.run.discard.filter(c => c.uid !== chosen.card.uid);
       state.fight.hero_field[chosen.idx] = null;
+      if (Array.isArray(state.run.recruits_owned)) {
+        const ridx = state.run.recruits_owned.indexOf(chosen.card.id);
+        if (ridx !== -1) state.run.recruits_owned.splice(ridx, 1);
+      }
       _log_entry(`${source_card.name}: sacrificed ${chosen.card.name}!`, 'log-effect');
 
       if (effect.stat === 'atk') {
@@ -526,6 +542,34 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
     // resolve_hero_card() when computing shield absorption.
     case 'pierce': {
       source_card._pierce = true;
+      break;
+    }
+
+    // ── bodyguard ─────────────────────────────────────────────
+    // Adds a 'kill-interception' charge to state.fight.bodyguard_charges.
+    // The first monster 'kill' effect consumes one charge and is negated.
+    // Counterplay to Death Wraith / Banshee / Lich Sovereign.
+    case 'bodyguard': {
+      state.fight.bodyguard_charges = (state.fight.bodyguard_charges ?? 0) + 1;
+      _log_entry(`${source_card.name}: stands guard — next Slay will be intercepted.`, 'log-effect');
+      break;
+    }
+
+    // ── inspire ───────────────────────────────────────────────
+    // Clears all current enrage stacks on the Big Bad by resetting atk to
+    // base_atk_for_inspire (the value before any enrage). Mechanically: store
+    // base atk on the BB the first time enrage applies, then on inspire reset
+    // bb.atk to that stored value. This does NOT undo weaken_atk_next.
+    case 'inspire': {
+      const bb = state.fight.big_bad;
+      if (bb._base_atk_for_inspire === undefined) {
+        _log_entry(`${source_card.name}: inspire — no enrage to clear.`, 'log-effect');
+      } else {
+        const cleared = bb.atk - bb._base_atk_for_inspire;
+        bb.atk = bb._base_atk_for_inspire;
+        bb._enrage_stacks = 0;
+        _log_entry(`${source_card.name}: inspire — ${bb.name} ATK reset (-${cleared}).`, 'log-effect');
+      }
       break;
     }
 
@@ -615,16 +659,35 @@ export function apply_monster_effect(state, effect, source_card, _slot_index = 0
 
     // ── enrage ───────────────────────────────────────────────
     // Permanently buffs the Big Bad's ATK by effect.amount for the rest of
-    // the fight. Stacks. Compounds quickly if not silenced.
+    // the fight. Stacks, but capped by ENRAGE_MAX_STACK applications. On the
+    // first stack we record the BB's base ATK so the hero 'inspire' effect
+    // can reset it.
     case 'enrage': {
+      const ENRAGE_MAX_STACK = 4;  // mirrors constant; kept inline to avoid an import.
+      const bb = state.fight.big_bad;
       const amt = effect.amount ?? 1;
-      state.fight.big_bad.atk += amt;
-      _log_entry(`${source_card.name}: ${state.fight.big_bad.name} enraged — ATK permanently +${amt}!`, 'log-monster');
+      bb._enrage_stacks = bb._enrage_stacks ?? 0;
+      if (bb._base_atk_for_inspire === undefined) bb._base_atk_for_inspire = bb.atk;
+      if (bb._enrage_stacks >= ENRAGE_MAX_STACK) {
+        _log_entry(`${source_card.name}: ${bb.name} cannot enrage further (cap reached).`, 'log-monster');
+        break;
+      }
+      bb.atk            += amt;
+      bb._enrage_stacks += 1;
+      _log_entry(`${source_card.name}: ${bb.name} enraged — ATK permanently +${amt} (${bb._enrage_stacks}/${ENRAGE_MAX_STACK})!`, 'log-monster');
       break;
     }
 
     // ── kill ─────────────────────────────────────────────────
+    // Permadeath effect. If the player has accumulated any 'bodyguard' charges
+    // (state.fight.bodyguard_charges > 0), one charge is consumed and the
+    // kill is fully negated — counterplay to Death Wraith / Banshee.
     case 'kill': {
+      if ((state.fight.bodyguard_charges ?? 0) > 0) {
+        state.fight.bodyguard_charges -= 1;
+        _log_entry(`${source_card.name}: Slay intercepted by a Bodyguard! (${state.fight.bodyguard_charges} charge(s) left)`, 'log-effect');
+        break;
+      }
       const killable = state.fight.hero_field.filter(Boolean);
       if (killable.length === 0) {
         _log_entry(`${source_card.name}: kill — no hero target.`, 'log-effect');
@@ -636,6 +699,11 @@ export function apply_monster_effect(state, effect, source_card, _slot_index = 0
       state.run.deck    = state.run.deck.filter(c => c.uid !== killed.uid);
       state.run.hand    = state.run.hand.filter(c => c.uid !== killed.uid);
       state.run.discard = state.run.discard.filter(c => c.uid !== killed.uid);
+      // Also remove from run.recruits_owned so it doesn't resurrect next fight.
+      if (Array.isArray(state.run.recruits_owned)) {
+        const ridx = state.run.recruits_owned.indexOf(killed.id);
+        if (ridx !== -1) state.run.recruits_owned.splice(ridx, 1);
+      }
       _log_entry(`${source_card.name}: ${killed.name} slain and deleted from the run!`, 'log-monster');
       break;
     }

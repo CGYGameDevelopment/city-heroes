@@ -35,8 +35,8 @@ There are two distinct loading mechanisms in `index.html`:
 
 The import graph must remain acyclic: `renderer.js` never imports from `engine.js`. Both bridges are wired in `04_boot_main.js` (note: the file's internal header comment says `startup_validator.js` — this is a naming inconsistency in the codebase).
 
-- **Engine → renderer** (`init_engine(renderer_fns)`): required functions — `render`, `log_entry`, `log_phase`, `flash_notification`, `clear_hand_selection`, `show_prefight_screen`, `show_upgrade_screen`, `show_summary_screen`, `show_screen`.
-- **Renderer → engine** (`setupEventListeners(engine_fns)`): required functions — `start_new_run`, `begin_fight`, `on_phase_btn`, `quick_play_all`, `on_hand_card_click`, `on_hero_slot_click`, `on_market_card_click`, `on_unlock_market_slot`, `on_upgrade_market_click`, `apply_upgrade`, `get_effective_market_size`, `get_slot_unlock_cost`, `get_card_cost`, `create_card_instance`, `shuffle_array`.
+- **Engine → renderer** (`init_engine(renderer_fns)`): required functions — `render`, `log_entry`, `log_phase`, `flash_notification`, `clear_hand_selection`, `show_prefight_screen`, `show_upgrade_screen`, `show_summary_screen`, `show_screen`, `show_city_select_screen`.
+- **Renderer → engine** (`setupEventListeners(engine_fns)`): required functions — `start_new_run`, `begin_fight`, `on_phase_btn`, `quick_play_all`, `on_hand_card_click`, `on_hero_slot_click`, `on_market_card_click`, `on_unlock_market_slot`, `on_upgrade_market_click`, `apply_upgrade`, `on_city_select`, `get_effective_market_size`, `get_slot_unlock_cost`, `get_card_cost`, `create_card_instance`, `shuffle_array`.
 
 ---
 
@@ -102,7 +102,7 @@ Valid `effect.type` values and their required fields. Hero effects are in `apply
 | `recur` | *(no extra fields)* — pulls a random hero/starter/promoted from discard into an empty field slot |
 | `shield_drain` | `amount` — reduces monster shield by this much |
 | `weaken_atk` | `amount` — reduces Big Bad ATK by this much next turn |
-| `stat_mod_all` | `stat`: `'atk'`, `amount` — buffs all active hero field cards; `duration` is stored and logged but not enforced (no expiry logic) |
+| `stat_mod_all` | `stat`: `'atk'`, `amount` — buffs all active hero field cards for the current turn only (no `duration` field — buffs vanish at resolution end with `temp_atk_mod` reset) |
 | `kill_monster` | *(no extra fields)* — permanently banishes a random monster type from this fight |
 | `cleanse` | `zones` (array), `count`: `'all'\|number` — removes `corrupted` flag from cards |
 | `ally_bonus` | `stat`: `'atk'\|'gold'\|'shield'\|'morale'`, `amount`; optional `role` (defaults to source card's role), optional `threshold` (defaults to 2). Counts heroes in `hero_field` matching `role` (including self); if `>= threshold`, applies amount. `atk` buffs self only; others are global. |
@@ -112,9 +112,11 @@ Valid `effect.type` values and their required fields. Hero effects are in `apply
 | `lifesteal` | *(no extra fields)* — heals City Morale equal to damage dealt to the Big Bad by this card (capped at `max_morale`). |
 | `bulwark` | *(no extra fields)* — damage absorbed by monster shield is added to City Defence. |
 | `pierce` | *(no extra fields)* — this card's ATK ignores monster shield. |
-| `scrap_self` | *(no extra fields)* — banishes this card from the run after resolution instead of returning it to discard. |
+| `scrap_self` | *(no extra fields)* — banishes this card from the run after resolution instead of returning it to discard. Also removed from `state.run.recruits_owned`. |
 | `scaling_atk` | `source`: `'gold_pool'\|'city_def'\|'hand_size'\|'monster_shield'\|'city_morale_lost'`, optional `divisor` (>= 1, defaults to 1). Adds `floor(source / divisor)` to source card's ATK this turn. |
-| `sacrifice` | `target`: `'adjacent_starter'\|'adjacent_any'`, `stat`: `'atk'\|'gold'\|'shield'\|'morale'`, `amount`. Banishes an adjacent hero from the run, then grants the bonus. |
+| `sacrifice` | `target`: `'adjacent_starter'\|'adjacent_any'`, `stat`: `'atk'\|'gold'\|'shield'\|'morale'`, `amount`. Banishes the lowest-cost adjacent hero from the run (ties broken by leftmost slot — deterministic, no longer random), then grants the bonus. Also removed from `state.run.recruits_owned`. |
+| `bodyguard` | *(no extra fields)* — adds one charge to `state.fight.bodyguard_charges`. Each charge intercepts and negates the next monster `kill` effect (Death Wraith, Banshee). Charges persist across turns within the fight; reset at fight start. |
+| `inspire` | *(no extra fields)* — clears all current `enrage` stacks on the Big Bad by resetting its ATK to the pre-enrage base (stored as `bb._base_atk_for_inspire` on first enrage application). Does not affect `weaken_atk_next`. |
 
 **Monster effects**
 
@@ -122,7 +124,7 @@ Valid `effect.type` values and their required fields. Hero effects are in `apply
 |------|----------------|
 | `kill` | *(no extra fields)* — permanently deletes a random hero card from the run |
 | `corrupt` | optional `count` (defaults to 1) — marks N random non-corrupted cards across deck/hand/discard as `corrupted`. Corrupted cards skip resolution. Removed by hero `cleanse` effect. |
-| `enrage` | `amount` — permanently buffs the Big Bad's ATK by `amount` for the rest of the fight. Stacks. |
+| `enrage` | `amount` — permanently buffs the Big Bad's ATK by `amount` for the rest of the fight. Stacks, but capped at `ENRAGE_MAX_STACK` (4) applications per fight. Counterplay: the hero `inspire` effect resets all current stacks. |
 
 ---
 
@@ -183,6 +185,9 @@ Each city must also have an entry in `city_art`.
 | `UPGRADE_CHOICE_COUNT` | 3 | Promoted cards offered between fights |
 | `MARKET_UPGRADE_COSTS` | `{3:4, 4:8, 5:12}` | Gold cost to unlock each market tier |
 | `MARKET_SLOT_UNLOCK_BASE` | 5 | Base cost per extra market slot; cost = `(slots_unlocked + 1) * base` |
+| `ENRAGE_MAX_STACK` | 4 | Maximum number of monster `enrage` applications per fight |
+| `CITY_CHOICE_COUNT` | 3 | Number of city options shown to the player at run start |
+| `RECRUITS_KEPT_PER_FIGHT` | `null` | If a number, randomly subsets `recruits_owned` to that many cards when rebuilding the deck. `null` keeps every recruit. |
 
 Timing constants (`DRAW_PHASE_DELAY_MS`, `RESOLVE_STEP_DELAY_MS`, `FIGHT_END_DELAY_MS`, `BIG_BAD_PHASE_DELAY_MS`) control animation pacing.
 
@@ -208,11 +213,13 @@ If any errors are found, the Begin Run button shows `FAILED TO LOAD` and all err
 
 | Namespace | Lifetime | Key fields |
 |-----------|----------|------------|
-| `state.run` | Entire run | `fight_number`, `deck`, `hand`, `discard`, `big_bads` (fight history) |
-| `state.fight` | Single fight | `city`, `big_bad`, `city_morale`, `city_def`, `monster_shield`, `gold_pool`, `hero_field`, `monster_field`, `monster_excluded_ids`, `market_level`, `market_unlocked_slots`, `market`, `fight_result` |
+| `state.run` | Entire run | `fight_number`, `deck`, `hand`, `discard`, `big_bads` (fight history), `city_id` (locked city for the run), `recruits_owned` (array of card ids the player bought, carries deck across fights), `market_level`, `market_unlocked_slots` (persisted market progress) |
+| `state.fight` | Single fight | `city`, `big_bad`, `city_morale`, `city_def`, `monster_shield`, `gold_pool`, `hero_field`, `monster_field`, `monster_excluded_ids`, `market_level`, `market_unlocked_slots`, `market`, `fight_result`, `big_bad_atk_slot` (index of the BB's direct-ATK card for renderer telegraph), `bodyguard_charges` (intercepts pending against `kill` effects) |
 | `state.turn` | Single turn | `phase`, `turn_number`, `atk_weakened_next`, `cost_reduce_next`, `resolving_step`, `active_resolution_sequence`, `completed_slots` |
 
 `state.fight` is `null` until `advance_to_next_fight()` runs. `state.turn` is `null` until the first draw phase.
+
+**Run-level persistence (new):** market level, unlocked market slots, and hero-type cards the player recruited all carry forward into the next fight. `rebuild_player_deck` rebuilds the starter set, overwrites random starters with promoted cards (as before), then appends a fresh instance of each recruit in `state.run.recruits_owned`. Hero cards banished mid-fight (`scrap_self`, `sacrifice`, `kill`, `scrap`) are also removed from `recruits_owned` so they do not resurrect.
 
 ---
 

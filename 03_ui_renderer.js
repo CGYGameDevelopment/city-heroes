@@ -29,6 +29,7 @@ let _on_market_card_click;
 let _on_unlock_market_slot;
 let _on_upgrade_market_click;
 let _apply_upgrade;
+let _on_city_select;
 
 // Engine query helpers injected by setupEventListeners().
 let _get_effective_market_size;
@@ -205,6 +206,27 @@ function render_shields(state) {
   };
   show_pill('city-def-pill',   'city-def-val',  state.fight.city_def);
   show_pill('mon-shield-pill', 'mon-shield-val', state.fight.monster_shield);
+
+  // Bodyguard charges — show inline pill alongside city defence. Lazily create
+  // the pill element on first display so we don't need a static HTML node.
+  const container = document.getElementById('shields-display');
+  if (container) {
+    let bg_pill = document.getElementById('bodyguard-pill');
+    const charges = state.fight.bodyguard_charges ?? 0;
+    if (charges > 0) {
+      if (!bg_pill) {
+        bg_pill = document.createElement('div');
+        bg_pill.id = 'bodyguard-pill';
+        bg_pill.className = 'shield-pill';
+        bg_pill.style.cssText = 'background:#3b1d4a;color:#e0c8ff;border:1px solid #a78bff;';
+        container.appendChild(bg_pill);
+      }
+      bg_pill.innerHTML = `🛡 BODYGUARD: <span>${charges}</span>`;
+      bg_pill.classList.remove('hidden');
+    } else if (bg_pill) {
+      bg_pill.classList.add('hidden');
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -419,6 +441,29 @@ function make_card_element(card, is_selected, is_resolving, display_cost = null)
   el.className     = `card ${type_class} ${role_class}`.trim();
   if (is_selected)  el.classList.add('selected-from-hand');
   if (is_resolving) el.classList.add('resolving');
+  // Corrupted cards are visually distinct so the player can see at a glance
+  // when their hand has been disrupted. Inline styling keeps this self-contained
+  // without requiring a CSS edit.
+  if (card.corrupted) {
+    el.classList.add('corrupted');
+    el.style.filter   = 'sepia(0.6) hue-rotate(60deg) saturate(1.4)';
+    el.style.boxShadow = 'inset 0 0 16px rgba(120, 30, 160, 0.7), 0 0 12px rgba(150, 60, 200, 0.5)';
+    el.style.opacity  = '0.85';
+    // Floating corruption badge.
+    const badge = document.createElement('div');
+    badge.textContent = '☠ CORRUPTED';
+    badge.style.cssText = 'position:absolute;top:4px;left:4px;background:#5a1a6a;color:#f5d0ff;font-size:9px;font-weight:bold;padding:2px 5px;border-radius:3px;letter-spacing:0.5px;z-index:5;pointer-events:none;';
+    el.style.position = 'relative';
+    el.appendChild(badge);
+  }
+  // Telegraph: the Big Bad's own ATK card gets a distinct red glow so the
+  // player knows which monster slot holds the boss attack and can plan
+  // 'stun opposite' placements accordingly.
+  if (card.subtype === 'atk') {
+    el.classList.add('big-bad-atk');
+    el.style.boxShadow = 'inset 0 0 20px rgba(220, 30, 30, 0.6), 0 0 12px rgba(220, 30, 30, 0.5)';
+    el.style.border    = '2px solid #dc2626';
+  }
   render_card_into_element(card, el, false, display_cost);
   el.addEventListener('mouseenter', () => render_card_preview(card));
   el.addEventListener('mouseleave', () => clear_card_preview());
@@ -660,6 +705,90 @@ export function show_screen(screen_id) {
 // SCREEN BUILDERS
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Shows the city-selection screen at the start of a run.
+ * Lazily creates a dedicated DOM container the first time it is called so
+ * we don't need a separate <div> in index.html. The chosen city locks in
+ * for the rest of the run.
+ *
+ * options is an array of city defs to choose between.
+ */
+export function show_city_select_screen(state, options) {
+  let screen = document.getElementById('screen-city-select');
+  if (!screen) {
+    screen = document.createElement('div');
+    screen.id        = 'screen-city-select';
+    screen.className = 'screen';
+    document.body.appendChild(screen);
+  }
+  screen.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'prefight-header';
+  header.textContent = '— CHOOSE YOUR CITY —';
+  screen.appendChild(header);
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'screen-hint';
+  subtitle.textContent =
+    'Your city will stand with you through all three battles. Choose wisely — its strengths shape your entire run.';
+  screen.appendChild(subtitle);
+
+  const choice_row = document.createElement('div');
+  choice_row.className = 'prefight-vs';
+  choice_row.style.flexWrap = 'wrap';
+  choice_row.style.gap      = '20px';
+  choice_row.style.justifyContent = 'center';
+  screen.appendChild(choice_row);
+
+  for (const city of options) {
+    const panel = document.createElement('div');
+    panel.className = 'prefight-panel';
+    panel.style.cursor = 'pointer';
+    panel.style.minWidth = '220px';
+    panel.style.transition = 'transform 0.15s, box-shadow 0.15s';
+
+    const label = document.createElement('div');
+    label.className = 'prefight-label';
+    label.textContent = 'CITY';
+    panel.appendChild(label);
+
+    const sprite = document.createElement('canvas');
+    sprite.className = 'prefight-sprite-wrap';
+    sprite.width = 72; sprite.height = 72;
+    panel.appendChild(sprite);
+    paint_sprite(sprite, city_art[city.id]);
+
+    const name = document.createElement('div');
+    name.className = 'prefight-name';
+    name.textContent = city.name;
+    panel.appendChild(name);
+
+    const type = document.createElement('div');
+    type.className = 'prefight-title';
+    type.textContent = city.type;
+    panel.appendChild(type);
+
+    const stats = document.createElement('div');
+    stats.className = 'prefight-stats';
+    stats.textContent = `Morale: ${city.max_morale}`;
+    panel.appendChild(stats);
+
+    const effect_text = document.createElement('div');
+    effect_text.className = 'prefight-deck-desc';
+    effect_text.textContent = (city.effects ?? []).map(e => e.desc).join(' ');
+    panel.appendChild(effect_text);
+
+    panel.addEventListener('mouseenter', () => { panel.style.transform = 'translateY(-4px)'; panel.style.boxShadow = '0 8px 24px rgba(255,200,80,0.3)'; });
+    panel.addEventListener('mouseleave', () => { panel.style.transform = ''; panel.style.boxShadow = ''; });
+    panel.addEventListener('click', () => _on_city_select(city.id));
+
+    choice_row.appendChild(panel);
+  }
+
+  show_screen('screen-city-select');
+}
+
 export function show_prefight_screen(state) {
   // Reset flash-tracking so a new fight never inherits the previous fight's values.
   _prev_bb_hp       = null;
@@ -794,6 +923,7 @@ export function setupEventListeners(fns) {
   _on_unlock_market_slot  = fns.on_unlock_market_slot;
   _on_upgrade_market_click = fns.on_upgrade_market_click;
   _apply_upgrade          = fns.apply_upgrade;
+  _on_city_select         = fns.on_city_select;
 
   // Query helpers used by render functions
   _get_effective_market_size = fns.get_effective_market_size;
