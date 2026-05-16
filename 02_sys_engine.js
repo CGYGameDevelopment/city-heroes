@@ -103,9 +103,13 @@ export function pick_random(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-/** Maps a card/big-bad role to its ATK type string for resolution pip display. */
-function atk_type_from_role(role) {
-  return role === 'magical' ? 'atk-magical' : 'atk-physical';
+/**
+ * Maps a card's `atk_type` to its CSS class name for resolution pip display.
+ * 'magical' → 'atk-magical'; 'physical' and everything else (including 'none'
+ * when a scaling effect produced damage on an 'atk_type: none' card) → 'atk-physical'.
+ */
+function atk_type_to_pip_class(atk_type) {
+  return atk_type === 'magical' ? 'atk-magical' : 'atk-physical';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -756,6 +760,16 @@ function resolve_current_step(state, side, slot) {
 function resolve_hero_card(state, card, slot_index) {
   const big_bad = state.fight.big_bad;
 
+  // Per-resolution flags set by effects (multistrike, pierce, lifesteal,
+  // bulwark, scrap_self). Cleared before re-applying effects so the same card
+  // resolving twice in one run (e.g. via 'recur' from discard) cannot inherit
+  // stale flags from a prior resolution.
+  card._multistrike         = undefined;
+  card._pierce              = undefined;
+  card._lifesteal           = undefined;
+  card._bulwark             = undefined;
+  card._scrap_after_resolve = undefined;
+
   for (const effect of card.effects) {
     apply_hero_effect(state, effect, card, slot_index);
   }
@@ -787,7 +801,7 @@ function resolve_hero_card(state, card, slot_index) {
     const pierce_tag = card._pierce ? ' (pierce)' : '';
     if (total_damage > 0) {
       _renderer.log_entry(`${card.name} deals ${total_damage}${strike_tag} ${card.atk_type} dmg to ${big_bad.name}${pierce_tag}.`, 'log-hero');
-      card.resolution_pips.push({ type: atk_type_from_role(card.atk_type), value: total_damage });
+      card.resolution_pips.push({ type: atk_type_to_pip_class(card.atk_type), value: total_damage });
     } else {
       _renderer.log_entry(`${card.name}: ATK fully absorbed by monster shield${strike_tag}.`, 'log-hero');
       card.resolution_pips.push({ type: 'blocked', value: total_blocked });
@@ -858,7 +872,7 @@ function resolve_monster_card(state, card, slot_index) {
         `${defence_absorbed > 0 ? ` (${defence_absorbed} blocked)` : ''}`,
         'log-monster'
       );
-      card.resolution_pips.push({ type: atk_type_from_role(card.atk_type), value: damage_dealt });
+      card.resolution_pips.push({ type: atk_type_to_pip_class(card.atk_type), value: damage_dealt });
     } else {
       _renderer.log_entry(`${card.name}: ATK fully absorbed by city defence.`, 'log-monster');
       card.resolution_pips.push({ type: 'blocked', value: effective_atk });

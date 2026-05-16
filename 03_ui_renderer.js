@@ -124,10 +124,21 @@ function render_stats(state) {
 function flash_panel(panel_id, css_class) {
   const el = document.getElementById(panel_id);
   if (!el) return;
+  // Clear any pending removal so rapid re-flashes (e.g. multistrike) don't
+  // strip the class mid-animation. Key per panel+class so different flashes
+  // on the same panel don't interfere with each other.
+  const key = `flashTimer_${css_class}`;
+  if (el.dataset[key]) {
+    clearTimeout(Number(el.dataset[key]));
+    delete el.dataset[key];
+  }
   el.classList.remove(css_class);
   void el.offsetWidth; // force reflow so animation restarts
   el.classList.add(css_class);
-  setTimeout(() => el.classList.remove(css_class), 700);
+  el.dataset[key] = String(setTimeout(() => {
+    el.classList.remove(css_class);
+    delete el.dataset[key];
+  }, 700));
 }
 
 function render_big_bad(state) {

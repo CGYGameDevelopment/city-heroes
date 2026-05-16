@@ -113,6 +113,17 @@ function validate_card_def(def, source) {
         } else if (find_card_def_by_id(effect.replace_with) === null) {
           errors.push(`${tag} effect[${i}] (transform) unknown 'replace_with' id '${effect.replace_with}'.`);
         }
+        // target shape — runtime reads effect.target.match and effect.target.value
+        if (typeof effect.target !== 'object' || effect.target === null) {
+          errors.push(`${tag} effect[${i}] (transform) missing 'target' object.`);
+        } else {
+          if (effect.target.match !== 'id' && effect.target.match !== 'type') {
+            errors.push(`${tag} effect[${i}] (transform) 'target.match' must be 'id' or 'type'.`);
+          }
+          if (typeof effect.target.value !== 'string' || !effect.target.value.trim()) {
+            errors.push(`${tag} effect[${i}] (transform) 'target.value' must be a non-empty string.`);
+          }
+        }
       }
       if (effect.type === 'stun' && !VALID_STUN_SELECTIONS.has(effect.selection)) {
         errors.push(`${tag} effect[${i}] (stun) invalid selection '${effect.selection}'.`);
