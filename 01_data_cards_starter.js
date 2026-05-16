@@ -1,8 +1,3 @@
-// 01_data_cards_starter.js
-// The player's starting deck for every run.
-// Cards are type 'starter', cost 0, and are not buyable from the market.
-// Do not add engine logic to this file.
-// 00_core_registry.js must load first.
 
 const cards_starter = [
 

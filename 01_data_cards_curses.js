@@ -1,17 +1,3 @@
-// 01_data_cards_curses.js
-// Curse card definitions (Phase 10).
-//
-// Curses are type 'curse' — they take a slot in the player's deck and hand
-// but produce no payoff when resolved. They are the cost of greed: events
-// that grant powerful rewards may also add a curse to the deck.
-//
-// Curses go through normal placement → resolve flow. Their resolve is a
-// no-op (no atk/gold/morale/shield/effects) so the slot they take is wasted.
-// They go to the discard like any other card and continue cycling unless
-// scrapped (Forge, Sentinel, etc.).
-//
-// Curses are not buyable from the market. They are only added to the deck
-// by events.
 
 Registry.register_cards_curses([
 

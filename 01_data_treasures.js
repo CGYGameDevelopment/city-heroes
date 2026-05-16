@@ -1,22 +1,3 @@
-// 01_data_treasures.js
-// Treasure definitions — out-of-deck rewards earned between fights (Phase 5).
-//
-// Treasures persist across fights in state.run.treasures. They fire at hook
-// points the engine emits: 'start_of_turn', 'start_of_fight',
-// 'on_recruit', 'on_turn_end'. Each treasure declares one hook + one
-// effect block (same effect schema cards use).
-//
-// Add a treasure here, register it via Registry.register_treasures(),
-// and it becomes selectable on the upgrade screen alongside promoted heroes.
-//
-// Shape:
-//   id      — unique string
-//   name    — display name (uppercase)
-//   desc    — single-line tooltip text
-//   hook    — when to fire ('start_of_turn' | 'start_of_fight'
-//             | 'on_recruit' | 'on_turn_end')
-//   effect  — { type, ...fields } using existing effect schema
-//             (gain_gold, gain_morale, gain_shield, damage, draw, etc.)
 
 var treasures = [
 

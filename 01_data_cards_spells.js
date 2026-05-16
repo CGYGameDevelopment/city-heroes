@@ -1,19 +1,3 @@
-// 01_data_cards_spells.js
-// Spell card definitions (Phase 6).
-//
-// Spells are type 'spell' — they live in the deck and hand but never go
-// to a hero field slot. When clicked from hand during the HEROES phase,
-// they resolve all 'on_resolve' effects immediately, then either go to
-// the discard pile or are consumed (removed from the run pool entirely).
-//
-// Convention: spells should use only the effect block for their actual
-// payoff (damage, gain_gold, draw, etc.). The card's atk/gold/morale/shield
-// fields are not applied for spells — only effect blocks fire.
-//
-// Consume flag: spells with `consume: true` are one-shot — after casting,
-// they leave the run permanently. This is the natural deck-thinning lever.
-// Higher-power spells should generally be consume:true so they don't
-// dominate by recycling.
 
 Registry.register_cards_market([
 

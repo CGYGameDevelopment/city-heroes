@@ -1,22 +1,3 @@
-// 01_data_events.js
-// Between-fight events (Phase 10).
-//
-// Events present a short narrative + 2 choices to the player. Each choice
-// has an outcomes list of {type, ...} actions that mutate run state.
-// Outcomes resolve immediately when the player picks; then the run continues
-// to the upgrade screen / next fight as normal.
-//
-// Outcome types (handled in 02_sys_engine.js apply_event_outcome):
-//   add_card_to_deck    — { card_id }                add a card to the run discard
-//   add_curse           — { count?: 1 }              add N random curses to the discard
-//   add_treasure        — { treasure_id }            grant a specific treasure
-//   gold                — { amount }                 +amount Gold (carries to next fight start)
-//   max_morale          — { amount }                 modify city max_morale (next fight)
-//   scrap_random        — { type: 'starter'|'any' }  scrap one random card from the deck
-//
-// The pool below is small but each event commits the player to a *direction*
-// — gold vs morale, power vs purity, etc. Add more by appending to the
-// Registry.
 
 var events = [
 

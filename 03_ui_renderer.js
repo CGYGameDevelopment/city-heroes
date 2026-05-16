@@ -1,14 +1,3 @@
-// renderer.js
-// All DOM rendering for City Heroes.
-//
-// Imports:  constants.js, app.js   (no engine.js — zero circular risk)
-// Owns:     App.ui_state, App.notification_timer
-// Exports:  render, log_entry, log_phase, flash_notification,
-//           clear_hand_selection, show_*, setupEventListeners
-//
-// Engine functions needed for event wiring and screen helpers are injected
-// once by startup_validator.js via setupEventListeners(fns). They are never
-// imported directly, keeping the module graph acyclic.
 
 import {
   FIELD_SIZE_MAX, MONSTER_SLOTS, FIGHTS_PER_RUN, UPGRADE_CHOICE_COUNT,
@@ -17,8 +6,6 @@ import {
 
 import { App } from './00_core_app.js';
 
-// Engine functions injected by setupEventListeners(). Declared here so all
-// renderer functions can reference them as closed-over variables.
 let _start_new_run;
 let _begin_fight;
 let _on_phase_btn;
@@ -34,25 +21,15 @@ let _apply_upgrade;
 let _apply_treasure;
 let _apply_event_choice;
 
-// Engine query helpers injected by setupEventListeners().
 let _get_effective_market_size;
 let _get_slot_unlock_cost;
 let _get_card_cost;
 let _create_card_instance;
 let _shuffle_array;
 
-// ─────────────────────────────────────────────────────────────
-// UI STATE — owned exclusively by renderer.js
-// ─────────────────────────────────────────────────────────────
-
-/** Called by engine.js (via bridge) to signal that the hand selection should clear. */
 export function clear_hand_selection() {
   App.ui_state.selected_hand_uid = null;
 }
-
-// ─────────────────────────────────────────────────────────────
-// ROOT RENDER
-// ─────────────────────────────────────────────────────────────
 
 export function render() {
   const state = App.game_state;
@@ -69,10 +46,6 @@ export function render() {
   render_market(state);
 }
 
-/**
- * Treasure inventory panel — shows the run's treasures in the stats bar.
- * Hover to see what each treasure does. Phase 5.
- */
 function render_treasures(state) {
   const panel = document.getElementById('treasure-inventory');
   if (!panel) return;
@@ -87,10 +60,6 @@ function render_treasures(state) {
     panel.appendChild(chip);
   }
 }
-
-// ─────────────────────────────────────────────────────────────
-// STATS BAR
-// ─────────────────────────────────────────────────────────────
 
 function render_stats(state) {
   const phase    = state.turn.phase;
@@ -148,12 +117,6 @@ function render_city(state) {
   paint_sprite_scaled(document.getElementById('city-sprite'), city_art[city.id], 64, 64);
 }
 
-/**
- * Big Bad Intent panel — Phase 1 telegraphing.
- * Shows the player exactly what the Big Bad will do next turn: its direct
- * attack value (with weakened modifier baked in) and the names of the monsters
- * that will be summoned. Hidden during fight-end and outside fights.
- */
 function render_intent(state) {
   const panel = document.getElementById('bb-intent-panel');
   if (!panel) return;
@@ -168,14 +131,12 @@ function render_intent(state) {
   label.textContent = 'NEXT TURN:';
   panel.appendChild(label);
 
-  // ATK pill
   const atk_pill = document.createElement('span');
   atk_pill.className   = 'bb-intent-pill bb-intent-atk';
   atk_pill.textContent = `⚔ ${intent.atk}`;
   atk_pill.title       = `${state.fight.big_bad.name} will strike the city for ${intent.atk} damage.`;
   panel.appendChild(atk_pill);
 
-  // Summon list
   if (intent.monsters.length === 0) {
     const none = document.createElement('span');
     none.className   = 'bb-intent-pill bb-intent-empty';
@@ -202,10 +163,6 @@ function render_shields(state) {
   show_pill('city-def-pill',   'city-def-val',  state.fight.city_def);
   show_pill('mon-shield-pill', 'mon-shield-val', state.fight.monster_shield);
 }
-
-// ─────────────────────────────────────────────────────────────
-// BOARD — FIELD & HAND
-// ─────────────────────────────────────────────────────────────
 
 function render_field(state) {
   const phase          = state.turn.phase;
@@ -336,7 +293,6 @@ function render_market_upgrade_slot(state) {
   const container  = document.getElementById('market-upgrade-slot');
   container.replaceChildren();
 
-  // ── Market upgrade button (or "fully unlocked" notice) ──
   const next_level = state.fight.market_level + 1;
   if (next_level > MARKET_LEVEL_MAX) {
     const maxed = document.createElement('div');
@@ -358,7 +314,6 @@ function render_market_upgrade_slot(state) {
     }
   }
 
-  // ── Forge button (Phase 7) ──
   const forge_cost = _get_forge_cost(state);
   if (forge_cost !== null) {
     const can_afford = state.fight.gold_pool >= forge_cost;
@@ -398,10 +353,6 @@ function make_market_locked_slot(slot_cost, gold_pool) {
   return el;
 }
 
-// ─────────────────────────────────────────────────────────────
-// CARD PREVIEW
-// ─────────────────────────────────────────────────────────────
-
 function render_card_preview(card) {
   if (!card) { clear_card_preview(); return; }
   const el         = document.getElementById('preview-card');
@@ -416,10 +367,6 @@ function clear_card_preview() {
   el.className = 'card';
   el.replaceChildren();
 }
-
-// ─────────────────────────────────────────────────────────────
-// CARD DOM BUILDERS
-// ─────────────────────────────────────────────────────────────
 
 function make_card_element(card, is_selected, is_resolving, display_cost = null) {
   const type_class = card.subtype === 'atk' ? 'card-atk' : `card-${card.type}`;
@@ -551,8 +498,6 @@ function render_card_into_element(card, card_el, large = false, display_cost = n
     card_el.appendChild(make_resolution_pips(card.resolution_pips));
   }
 
-  // Keyword chips — small icons under the description so the player learns
-  // the shared vocabulary at a glance. Hover the card for full text in preview.
   if (card.keywords?.length) {
     const kw_row = document.createElement('div');
     kw_row.className = 'card-keywords';
@@ -686,18 +631,10 @@ function make_spacer(css_class) {
   return el;
 }
 
-// ─────────────────────────────────────────────────────────────
-// SCREEN MANAGEMENT
-// ─────────────────────────────────────────────────────────────
-
 export function show_screen(screen_id) {
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById(screen_id).classList.add('active');
 }
-
-// ─────────────────────────────────────────────────────────────
-// SCREEN BUILDERS
-// ─────────────────────────────────────────────────────────────
 
 export function show_prefight_screen(state) {
   const bb   = state.fight.big_bad;
@@ -723,14 +660,9 @@ export function show_prefight_screen(state) {
   show_screen('screen-prefight');
 }
 
-/**
- * Between-fight event screen (Phase 10). Shows the event narrative and the
- * player's choices. Each choice resolves through _apply_event_choice which
- * mutates run state and proceeds to the upgrade screen.
- */
 export function show_event_screen(state, event_def) {
   if (!event_def) {
-    // Defensive — shouldn't happen, but never softlock the run.
+
     show_upgrade_screen(state);
     return;
   }
@@ -756,12 +688,10 @@ export function show_event_screen(state, event_def) {
 }
 
 export function show_upgrade_screen(state) {
-  // Filter out treasures the player already owns so they aren't offered twice.
+
   const owned_ids     = new Set((state.run.treasures ?? []).map(t => t.id));
   const treasure_pool = (Registry.treasures ?? []).filter(t => !owned_ids.has(t.id));
 
-  // Offer 2 promoted heroes + 1 treasure (Phase 5). If no treasures remain,
-  // fall back to 3 promoted heroes so the screen always presents 3 choices.
   const upgrades_shuffled = _shuffle_array([...Registry.cards_upgrades]);
   const choices = [
     { kind: 'promoted', def: upgrades_shuffled[0] },
@@ -771,7 +701,6 @@ export function show_upgrade_screen(state) {
       : { kind: 'promoted', def: upgrades_shuffled[2] },
   ].filter(c => c.def);
 
-  // Shuffle so the treasure isn't always rightmost.
   const display_choices = _shuffle_array(choices);
 
   document.getElementById('upgrade-victory-msg').textContent = state.fight.big_bad.victory_message;
@@ -826,7 +755,7 @@ function make_treasure_choice(state, treasure_def) {
 
   const card_display = document.createElement('div');
   card_display.className = 'upgrade-card upgrade-card-treasure';
-  // Visual: a chest icon over the treasure name.
+
   const icon = document.createElement('div');
   icon.className   = 'treasure-icon';
   icon.textContent = '✦';
@@ -869,10 +798,6 @@ export function show_summary_screen(state, is_victory) {
   show_screen('screen-summary');
 }
 
-// ─────────────────────────────────────────────────────────────
-// COMBAT LOG
-// ─────────────────────────────────────────────────────────────
-
 export function log_entry(text, css_class = '') {
   const container = document.getElementById('log-entries');
   if (!container) return;
@@ -886,10 +811,6 @@ export function log_entry(text, css_class = '') {
 
 export function log_phase(text) { log_entry(text, 'log-phase'); }
 
-// ─────────────────────────────────────────────────────────────
-// NOTIFICATIONS
-// ─────────────────────────────────────────────────────────────
-
 export function flash_notification(text) {
   const el = document.getElementById('notification');
   el.textContent = text;
@@ -898,15 +819,8 @@ export function flash_notification(text) {
   App.notification_timer = setTimeout(() => el.classList.remove('visible'), 1200);
 }
 
-// ─────────────────────────────────────────────────────────────
-// EVENT LISTENER SETUP
-// Called once by startup_validator.js after all modules are loaded and
-// validation passes. All engine function references arrive here as fns.*
-// so renderer.js never needs to import from engine.js.
-// ─────────────────────────────────────────────────────────────
-
 export function setupEventListeners(fns) {
-  // Store injected engine functions for use in render callbacks
+
   _start_new_run          = fns.start_new_run;
   _begin_fight            = fns.begin_fight;
   _on_phase_btn           = fns.on_phase_btn;
@@ -922,14 +836,12 @@ export function setupEventListeners(fns) {
   _apply_treasure         = fns.apply_treasure;
   _apply_event_choice     = fns.apply_event_choice;
 
-  // Query helpers used by render functions
   _get_effective_market_size = fns.get_effective_market_size;
   _get_slot_unlock_cost      = fns.get_slot_unlock_cost;
   _get_card_cost             = fns.get_card_cost;
   _create_card_instance      = fns.create_card_instance;
   _shuffle_array             = fns.shuffle_array;
 
-  // Attach button listeners
   document.getElementById('begin-run-btn')?.addEventListener('click', () => _start_new_run());
   document.getElementById('prefight-btn')?.addEventListener('click', () => _begin_fight());
   document.getElementById('quick-play-btn')?.addEventListener('click', () => _quick_play_all());

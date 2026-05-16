@@ -1,9 +1,3 @@
-// registry.js
-// Global data registry for City Heroes.
-// Populated by classic data files (cards_*.js, big_bads.js, cities.js) via
-// Registry.register_*() before the ES module entry point runs.
-//
-// Must load before any data file. No other dependencies.
 
 const Registry = {
   cards_starter:        [],
@@ -20,38 +14,32 @@ const Registry = {
   treasures:            [],
   events:               [],
 
-  /** Register starter card definitions. */
-  register_cards_starter(arr)        { this.cards_starter.push(...arr); },
-  /** Register hero / market card definitions. */
-  register_cards_market(arr)         { this.cards_market.push(...arr); },
-  /** Register promoted (upgrade) card definitions. */
-  register_cards_upgrades(arr)       { this.cards_upgrades.push(...arr); },
-  /** Register curse card definitions (Phase 10 — added to deck by events, never sold). */
-  register_cards_curses(arr)         { this.cards_curses.push(...arr); },
-  /** Register monster card definitions for a specific tier (1–3). */
-  register_cards_monster(tier, arr)  { this[`cards_monster_tier_${tier}`].push(...arr); },
-  /** Register big bad definitions for a specific tier (1–3). */
-  register_big_bads(tier, arr)       { this[`big_bads_tier_${tier}`].push(...arr); },
-  /** Register city definitions. */
-  register_cities(arr)               { this.cities.push(...arr); },
-  /** Register treasure definitions (Phase 5 — out-of-deck rewards). */
-  register_treasures(arr)            { this.treasures.push(...arr); },
-  /** Register between-fight event definitions (Phase 10). */
-  register_events(arr)               { this.events.push(...arr); },
+  register_cards_starter(starter_cards)        { this.cards_starter.push(...starter_cards); },
 
-  /**
-   * Called once by 04_boot_main.js after all data files have loaded.
-   * Freezes every pool so no classic script can accidentally mutate them after validation.
-   * register_*() calls after lock() will throw because push() is not allowed on a frozen array.
-   */
+  register_cards_market(market_cards)          { this.cards_market.push(...market_cards); },
+
+  register_cards_upgrades(upgrade_cards)       { this.cards_upgrades.push(...upgrade_cards); },
+
+  register_cards_curses(curse_cards)           { this.cards_curses.push(...curse_cards); },
+
+  register_cards_monster(tier, monster_cards)  { this[`cards_monster_tier_${tier}`].push(...monster_cards); },
+
+  register_big_bads(tier, big_bad_definitions) { this[`big_bads_tier_${tier}`].push(...big_bad_definitions); },
+
+  register_cities(city_definitions)            { this.cities.push(...city_definitions); },
+
+  register_treasures(treasure_definitions)     { this.treasures.push(...treasure_definitions); },
+
+  register_events(event_definitions)           { this.events.push(...event_definitions); },
+
   lock() {
-    const pools = [
+    const pool_names = [
       'cards_starter', 'cards_market', 'cards_upgrades', 'cards_curses',
       'cards_monster_tier_1', 'cards_monster_tier_2', 'cards_monster_tier_3',
       'big_bads_tier_1', 'big_bads_tier_2', 'big_bads_tier_3',
       'cities', 'treasures', 'events',
     ];
-    for (const key of pools) Object.freeze(this[key]);
+    for (const pool_name of pool_names) Object.freeze(this[pool_name]);
     Object.freeze(this);
   },
 };

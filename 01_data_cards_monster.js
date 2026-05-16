@@ -1,26 +1,3 @@
-// cards_monster.js
-// All monster card definitions, organised by tier.
-// Each tier's cards form a shared pool used by all Big Bads of that tier.
-// Cards are type 'monster', cost 0, and are never part of the player's deck.
-// Do not add engine logic to this file.
-//
-// Phase 4 — Tribe field. Each monster carries a `tribe` tag. A Big Bad with
-// `monster_tribes: ['undead', 'beast']` will only summon monsters whose tribe
-// is in that list. If a Big Bad omits monster_tribes, the full tier pool is
-// used (legacy behaviour).
-//
-// Tribes:
-//   beast      — wild creatures, brute physical pressure
-//   goblinoid  — light raiders, swarm pressure
-//   construct  — armoured, shielded, slow
-//   undead     — disruption, kill effects, gold drain
-//   serpent    — venomous, gold drain, sustained pressure
-//   void       — late-game terror, deck destruction
-
-// ---------------------------------------------------------------------------
-// Tier 1
-// Simple and readable — pure damage, minor drain.
-// ---------------------------------------------------------------------------
 
 var cards_monster_tier_1 = [
 
@@ -115,11 +92,6 @@ var cards_monster_tier_1 = [
   },
 
 ];
-
-// ---------------------------------------------------------------------------
-// Tier 2
-// Introduces disruption — corruption, debuffs.
-// ---------------------------------------------------------------------------
 
 var cards_monster_tier_2 = [
 
@@ -232,11 +204,6 @@ var cards_monster_tier_2 = [
   },
 
 ];
-
-// ---------------------------------------------------------------------------
-// Tier 3
-// Escalates to deck destruction and healing.
-// ---------------------------------------------------------------------------
 
 var cards_monster_tier_3 = [
 

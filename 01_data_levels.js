@@ -1,13 +1,3 @@
-// cities.js
-// All city definitions. A new city is randomly selected at the start of each fight.
-//
-// Static stats (max_morale, market_size, starting_def, hero_cost_discount,
-// bonus_gold_per_turn) shape the *baseline* of a fight. Phase 9 adds an
-// optional `passives` array that fires effects at engine hooks
-// ('start_of_turn', 'start_of_fight', 'on_recruit', 'on_turn_end') —
-// same schema as treasures.
-//
-// Do not add engine logic to this file.
 
 const cities = [
 

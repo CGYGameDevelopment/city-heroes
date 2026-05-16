@@ -1,7 +1,3 @@
-// cards_upgrades.js
-// All promoted hero definitions available in the post-fight upgrade pool.
-// Cards are type 'promoted', cost 0, and are never part of the market.
-// Do not add engine logic to this file.
 
 const cards_upgrades = [
 

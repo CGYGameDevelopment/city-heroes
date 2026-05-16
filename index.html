@@ -8,9 +8,6 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════
-     MAIN MENU
-═══════════════════════════════════════════════════════════ -->
 <div id="screen-menu" class="screen active">
   <div class="menu-title">
     <h1>CITY HEROES</h1>
@@ -24,9 +21,6 @@
   </p>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     PRE-FIGHT REVEAL
-═══════════════════════════════════════════════════════════ -->
 <div id="screen-prefight" class="screen">
   <div class="prefight-header" id="prefight-fight-label">-- FIGHT 1 OF 3 --</div>
   <div class="prefight-vs">
@@ -51,18 +45,12 @@
   <button type="button" class="btn" id="prefight-btn">PREPARE FOR BATTLE</button>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     FIGHT SCREEN
-═══════════════════════════════════════════════════════════ -->
 <div id="screen-fight" class="screen">
 
-  <!-- Main fight area -->
-  <div id="fight-main">
+    <div id="fight-main">
 
-    <!-- Stats bar -->
-    <div id="fight-stats">
-      <!-- Big Bad panel -->
-      <div class="entity-panel" id="bb-panel">
+        <div id="fight-stats">
+            <div class="entity-panel" id="bb-panel">
         <canvas id="bb-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
         <div class="entity-info">
           <div class="entity-name" id="bb-name">--</div>
@@ -74,8 +62,7 @@
           </div>
         </div>
       </div>
-      <!-- City panel -->
-      <div class="entity-panel" id="city-panel">
+            <div class="entity-panel" id="city-panel">
         <canvas id="city-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
         <div class="entity-info">
           <div class="entity-name" id="city-name">--</div>
@@ -89,17 +76,13 @@
         </div>
       </div>
       <div id="turn-counter">TURN <span id="turn-num">1</span></div>
-      <!-- Treasure inventory — shows out-of-deck treasures earned this run (Phase 5) -->
-      <div id="treasure-inventory"></div>
+            <div id="treasure-inventory"></div>
     </div>
 
-    <!-- Board -->
-    <div id="fight-board">
+        <div id="fight-board">
       <div id="market-board-label">&#9873; Bazaar &#8212; Spend Gold to Recruit &#9873;</div>
-      <!-- Market upgrade slot — visible only during Recruit phase -->
-      <div id="market-upgrade-slot"></div>
-      <!-- Prominent gold display shown only during Recruit phase -->
-      <div id="market-gold-banner">
+            <div id="market-upgrade-slot"></div>
+            <div id="market-gold-banner">
         <span class="mgb-icon">&#9830;</span>
         <span class="mgb-val" id="market-gold-val">0</span>
         <span class="mgb-label">Gold</span>
@@ -108,10 +91,8 @@
         <div class="shield-pill city-def hidden" id="city-def-pill">&#128737; CITY DEF: <span id="city-def-val">0</span></div>
         <div class="shield-pill mon-shield hidden" id="mon-shield-pill">&#9876; MON SHIELD: <span id="mon-shield-val">0</span></div>
       </div>
-      <!-- Big Bad Intent panel — telegraphs what the Big Bad will do next turn -->
-      <div id="bb-intent-panel" class="bb-intent-panel"></div>
-      <!-- Monster resolution order: right-to-left — initially hidden, shown by renderer -->
-      <div id="monster-order-arrow" class="order-arrow-row monster-arrow-row">
+            <div id="bb-intent-panel" class="bb-intent-panel"></div>
+            <div id="monster-order-arrow" class="order-arrow-row monster-arrow-row">
         <div class="order-arrow-track monster-track">
           <svg class="order-sword monster-sword" viewBox="0 0 220 22" xmlns="http://www.w3.org/2000/svg">
             <line x1="10" y1="11" x2="195" y2="11" stroke="#991b1b" stroke-width="2.5" stroke-linecap="round"/>
@@ -127,8 +108,7 @@
       </div>
       <div id="monster-row"></div>
       <div id="hero-row"></div>
-      <!-- Hero resolution order: left-to-right — initially hidden, shown by renderer -->
-      <div id="hero-order-arrow" class="order-arrow-row hero-arrow-row">
+            <div id="hero-order-arrow" class="order-arrow-row hero-arrow-row">
         <div class="order-arrow-track hero-track">
           <svg class="order-sword hero-sword" viewBox="0 0 220 22" xmlns="http://www.w3.org/2000/svg">
             <line x1="25" y1="11" x2="210" y2="11" stroke="#b45309" stroke-width="2.5" stroke-linecap="round"/>
@@ -144,11 +124,9 @@
       </div>
     </div>
 
-    <!-- Hand area -->
-    <div id="fight-hand-area">
+        <div id="fight-hand-area">
       <div id="hand-area-row">
-        <!-- Draw pile -->
-        <div class="pile-widget" id="draw-pile-widget">
+                <div class="pile-widget" id="draw-pile-widget">
           <div class="pile-stack">
             <div class="pile-face pile-draw">
               <span class="pile-count" id="draw-pile-count">0</span>
@@ -160,8 +138,7 @@
 
         <div id="hand-row"></div>
 
-        <!-- Discard pile -->
-        <div class="pile-widget" id="discard-pile-widget">
+                <div class="pile-widget" id="discard-pile-widget">
           <div class="pile-stack">
             <div class="pile-face pile-discard" id="discard-pile-face">
               <span class="pile-count" id="discard-pile-count">0</span>
@@ -171,8 +148,7 @@
           <div class="pile-label">Discard</div>
         </div>
 
-        <!-- Gold display -->
-        <div id="gold-display">
+                <div id="gold-display">
           <span class="gold-icon">&#9830;</span>
           <span class="gold-val" id="gold-val">0</span>
           <span class="gold-label">GOLD</span>
@@ -181,17 +157,14 @@
       </div>
       <div id="phase-bar">
         <div id="phase-bar-right">
-          <!-- initially hidden via CSS; renderer toggles display -->
-          <button type="button" id="quick-play-btn">&#9889; QUICK PLAY ALL</button>
+                    <button type="button" id="quick-play-btn">&#9889; QUICK PLAY ALL</button>
           <button type="button" id="phase-btn">Drawing...</button>
         </div>
       </div>
     </div>
 
-  </div><!-- /#fight-main -->
-
-  <!-- Right panel -->
-  <div id="fight-side">
+  </div>
+    <div id="fight-side">
     <div id="preview-area">
       <div id="preview-label">CARD PREVIEW</div>
       <div id="preview-card"></div>
@@ -202,11 +175,7 @@
     </div>
   </div>
 
-</div><!-- /#screen-fight -->
-
-<!-- ═══════════════════════════════════════════════════════════
-     BETWEEN-FIGHT EVENT (Phase 10)
-═══════════════════════════════════════════════════════════ -->
+</div>
 <div id="screen-event" class="screen">
   <div class="event-frame">
     <div class="event-title" id="event-title">EVENT</div>
@@ -215,9 +184,6 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     POST-FIGHT UPGRADE
-═══════════════════════════════════════════════════════════ -->
 <div id="screen-upgrade" class="screen">
   <div class="upgrade-header">
     <h2>VICTORY</h2>
@@ -227,9 +193,6 @@
   <p class="screen-hint narrow">The chosen hero will permanently replace a random starter card in your deck.</p>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     RUN SUMMARY
-═══════════════════════════════════════════════════════════ -->
 <div id="screen-summary" class="screen">
   <div id="summary-title" class="summary-title victory">VICTORY</div>
   <div id="summary-msg" class="summary-msg">The realm endures.</div>
@@ -237,32 +200,8 @@
   <button type="button" class="btn btn-gold">RETURN TO MENU</button>
 </div>
 
-<!-- Flash notification -->
 <div id="notification" role="alert" aria-live="assertive"></div>
 
-<!--
-  Script loading strategy
-  ───────────────────────
-  Classic scripts (synchronous, ordered):
-    registry.js        — must be first; creates the global Registry object
-    art.js             — sets make_art_painter(), big_bad_art, city_art
-                         (must precede data files that call make_art_painter())
-    cards_starter.js   — calls Registry.register_cards_starter()
-    cards_market.js    — calls Registry.register_cards_market()
-    cards_upgrades.js  — calls Registry.register_cards_upgrades()
-    cards_monster.js   — calls Registry.register_cards_monster(tier, [...])
-    big_bads.js        — calls Registry.register_big_bads(tier, [...])
-    cities.js          — calls Registry.register_cities()
-
-  ES module (deferred, single entry point):
-    startup_validator.js — type="module"; imports engine, renderer, constants, app.
-                           Runs on DOMContentLoaded after all classic scripts have run.
-                           Wires the engine→renderer bridge, validates data, gates
-                           Begin Run, and attaches event listeners.
-
-  Classic scripts run synchronously as they are parsed, so Registry is fully
-  populated before DOMContentLoaded fires and the module entry point runs.
--->
 <script src="00_core_registry.js"></script>
 <script src="03_ui_art_painters.js"></script>
 <script src="01_data_cards_starter.js"></script>

@@ -1,12 +1,3 @@
-// big_bads.js
-// All Big Bad definitions, organised by tier.
-// One Big Bad is drawn at random per fight from the pool matching that fight's tier.
-// Do not add engine logic to this file.
-
-// ---------------------------------------------------------------------------
-// Tier 1
-// Low HP, low ATK, low monster pressure — an accessible opener.
-// ---------------------------------------------------------------------------
 
 const big_bads_tier_1 = [
 
@@ -20,8 +11,8 @@ const big_bads_tier_1 = [
     max_hp:            45,
     atk:               2,
     monsters_per_turn: 2,
-    weak_against:      'magical',  // burns easily; arcane fire breaks goblin morale
-    strong_against:    'physical', // raw blade-on-blade favours the swarm
+    weak_against:      'magical',
+    strong_against:    'physical',
     monster_tribes:    ['goblinoid'],
     deck_desc:         'A swarm of quick, light raiders. Expect sustained physical pressure every turn.',
     victory_message:   'The Warchief lies defeated. The warrens fall silent.',
@@ -38,8 +29,8 @@ const big_bads_tier_1 = [
     max_hp:            50,
     atk:               3,
     monsters_per_turn: 1,
-    weak_against:      'physical',  // tough hide, but a focused strike fells beasts
-    strong_against:    'tactical',  // gold and tricks won't stop a maddened animal
+    weak_against:      'physical',
+    strong_against:    'tactical',
     monster_tribes:    ['beast'],
     deck_desc:         'A slow but powerful beast. Fewer cards per turn, but each hit lands hard.',
     victory_message:   'The beast collapses into the mud. The Rotwood is quiet.',
@@ -47,11 +38,6 @@ const big_bads_tier_1 = [
   },
 
 ];
-
-// ---------------------------------------------------------------------------
-// Tier 2
-// Higher HP and ATK, mixed monster decks with disruption.
-// ---------------------------------------------------------------------------
 
 const big_bads_tier_2 = [
 
@@ -65,8 +51,8 @@ const big_bads_tier_2 = [
     max_hp:            70,
     atk:               3,
     monsters_per_turn: 2,
-    weak_against:      'magical',  // arcane heat warps iron faster than steel can
-    strong_against:    'physical', // its armour shrugs off mundane blades
+    weak_against:      'magical',
+    strong_against:    'physical',
     monster_tribes:    ['construct'],
     deck_desc:         'A heavily armoured construct. Its deck layers monster shields onto the board each turn. Brute-force physical attacks will be wasted.',
     victory_message:   'The golem crumbles to scrap. The foundry grows cold.',
@@ -101,8 +87,8 @@ const big_bads_tier_2 = [
     max_hp:            65,
     atk:               4,
     monsters_per_turn: 2,
-    weak_against:      'physical', // a clean blade through the throat ends the dance
-    strong_against:    'magical',  // serpent magic devours competing magic
+    weak_against:      'physical',
+    strong_against:    'magical',
     monster_tribes:    ['serpent'],
     deck_desc:         'A cunning predator. Her deck bleeds your Gold Pool and deals magical damage. Expect to recruit fewer heroes than planned.',
     victory_message:   'The Serpent Queen dissolves into the deep. The amber grows still.',
@@ -110,11 +96,6 @@ const big_bads_tier_2 = [
   },
 
 ];
-
-// ---------------------------------------------------------------------------
-// Tier 3
-// High HP, high ATK, aggressive monster decks with deck destruction.
-// ---------------------------------------------------------------------------
 
 const big_bads_tier_3 = [
 
@@ -143,8 +124,8 @@ const big_bads_tier_3 = [
     max_hp:            120,
     atk:               4,
     monsters_per_turn: 3,
-    weak_against:      'tactical', // cunning planning unravels a centuries-old strategy
-    strong_against:    'magical',  // necromancy drinks lesser arcana
+    weak_against:      'tactical',
+    strong_against:    'magical',
     monster_tribes:    ['undead', 'void'],
     deck_desc:         'An ancient undead lord. Its deck kills heroes outright and hits with overwhelming magical force. Expect to lose party members permanently.',
     victory_message:   'The Sovereign\'s phylactery shatters. The undead crumble to dust.',
@@ -152,10 +133,6 @@ const big_bads_tier_3 = [
   },
 
 ];
-
-// ---------------------------------------------------------------------------
-// Tier 3 — additional bosses (Phase 8)
-// ---------------------------------------------------------------------------
 
 big_bads_tier_3.push(
   {

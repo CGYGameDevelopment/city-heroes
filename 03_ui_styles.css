@@ -1,10 +1,4 @@
-/* index_styles.css
-   All visual styles for City Heroes.
-   Do not add game logic to this file. */
 
-/* ─────────────────────────────────────────────────────────────
-   DESIGN TOKENS
-───────────────────────────────────────────────────────────── */
 :root {
   --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
   --bg:        #111318;
@@ -26,19 +20,15 @@
   --blue2:     #5599dd;
   --card-sm-w: clamp(87px, 14vh, 128px);
   --card-sm-h: clamp(120px, 19vh, 176px);
-  /* Card type background colours — used by .card, #preview-card, and .upgrade-card */
+
   --card-bg-hero:     #16121f;
   --card-bg-starter:  #131318;
   --card-bg-promoted: #131100;
   --card-bg-monster:  #130808;
   --card-bg-atk:      #180808;
-  /* --pip-colour is intentionally not set to a fixed value here.
-     The renderer sets it as an inline style on each .pip element at
-     runtime to match the stat being displayed (gold, morale, etc.).
-     The fallback below prevents invisible pips if it is ever rendered
-     without that inline override. */
+
   --pip-colour: var(--text);
-  /* Type scale */
+
   --fs-xs:  11px;
   --fs-sm:  13px;
   --fs-md:  15px;
@@ -48,9 +38,6 @@
   --fs-num: 22px;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   RESET & BASE
-───────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -61,16 +48,12 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   overflow-y: auto;
-  /* Allow horizontal scroll only when the viewport is narrower than the
-     fight screen's min-width (480px), so the layout isn't silently crushed. */
+
   overflow-x: auto;
   cursor: default;
   user-select: none;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   SCREENS
-───────────────────────────────────────────────────────────── */
 .screen {
   display: none;
   position: absolute;
@@ -78,9 +61,6 @@ body {
 }
 .screen.active { display: flex; }
 
-/* ─────────────────────────────────────────────────────────────
-   MAIN MENU
-───────────────────────────────────────────────────────────── */
 #screen-menu {
   flex-direction: column;
   align-items: center;
@@ -108,9 +88,6 @@ body {
   letter-spacing: 1px;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   PRE-FIGHT SCREEN
-───────────────────────────────────────────────────────────── */
 #screen-prefight {
   flex-direction: column;
   align-items: center;
@@ -184,15 +161,11 @@ body {
   padding-top: 40px;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   FIGHT SCREEN — LAYOUT
-───────────────────────────────────────────────────────────── */
 #screen-fight {
   flex-direction: row;
   height: 100dvh;
   overflow: hidden;
-  /* Prevent the side panel from crushing the main area on narrow viewports.
-     480px = minimum usable width: ~200px main area + 280px side panel. */
+
   min-width: 480px;
 }
 #fight-main {
@@ -203,7 +176,6 @@ body {
   min-width: 0;
 }
 
-/* ─── Stats bar ─────────────────────────────────────────── */
 #fight-stats {
   display: flex;
   align-items: stretch;
@@ -271,7 +243,6 @@ body {
   -webkit-box-orient: vertical;
 }
 
-/* ─── Board ─────────────────────────────────────────────── */
 #fight-board {
   flex: 1;
   min-height: 0;
@@ -296,7 +267,6 @@ body {
   margin-top: 4px;
 }
 
-/* Monster row */
 #monster-row {
   display: flex;
   align-items: center;
@@ -307,7 +277,6 @@ body {
 .monster-spacer      { width: calc(var(--card-sm-w) / 2 + 4px); flex-shrink: 0; }
 .monster-spacer-lead { width: calc(var(--card-sm-w) * 1.25 + 6px); flex-shrink: 0; }
 
-/* Hero row */
 #hero-row {
   display: flex;
   align-items: flex-end;
@@ -317,7 +286,6 @@ body {
 }
 .hero-spacer { width: calc(var(--card-sm-w) / 2 + 4px); flex-shrink: 0; }
 
-/* ─── Cards ─────────────────────────────────────────────── */
 .card {
   width: var(--card-sm-w);
   height: var(--card-sm-h);
@@ -331,14 +299,13 @@ body {
   flex-shrink: 0;
 }
 .card:hover { transform: translateY(-4px); z-index: 10; }
-/* Type drives background only */
+
 .card.card-hero     { background: var(--card-bg-hero); }
 .card.card-starter  { background: var(--card-bg-starter); }
 .card.card-promoted { background: var(--card-bg-promoted); }
 .card.card-monster  { background: var(--card-bg-monster); }
 .card.card-atk      { background: var(--card-bg-atk); }
-/* Spells (Phase 6) — distinct purple-violet bg + dashed border so they
-   read as "instant" cards that resolve from hand without a body. */
+
 .card.card-spell    {
   background: linear-gradient(180deg, #1a0a26 0%, #0a0510 100%);
   border-style: dashed;
@@ -349,7 +316,7 @@ body {
   background: linear-gradient(180deg, #1a0a26 0%, #0a0510 100%);
   border-style: dashed;
 }
-/* Role drives border colour */
+
 .card.role-physical { border-color: #993333; }
 .card.role-magical  { border-color: #334499; }
 .card.role-tactical { border-color: #336633; }
@@ -433,7 +400,6 @@ body {
   filter: drop-shadow(0 1px 4px rgba(0,0,0,0.9));
 }
 
-/* ── Resolution pip overlay ─────────────────────────────── */
 .pip-overlay {
   position: absolute;
   inset: 0;
@@ -506,7 +472,6 @@ body {
   color: var(--border2);
 }
 
-/* Slot index label */
 .slot-label {
   position: absolute;
   bottom: 3px;
@@ -516,7 +481,6 @@ body {
   pointer-events: none;
 }
 
-/* ─── Deck / Discard piles ──────────────────────────────── */
 #hand-area-row {
   display: flex;
   align-items: flex-end;
@@ -623,7 +587,6 @@ body {
 .pile-widget.empty .pile-stack::after { display: none; }
 .pile-widget.empty .pile-face { opacity: 0.3; }
 
-/* ─── Hand area ─────────────────────────────────────────── */
 #fight-hand-area {
   border-top: 1px solid var(--border);
   background: var(--bg2);
@@ -665,7 +628,6 @@ body {
 #gold-display .gold-label { font-size: var(--fs-xs); letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
 #gold-display .gold-spent { font-size: var(--fs-sm); color: var(--text-dim); }
 
-/* During Recruit phase, gold is shown prominently on the board */
 #fight-board.bazaar #market-gold-banner { display: flex; }
 #market-gold-banner {
   display: none;
@@ -685,7 +647,6 @@ body {
 #market-gold-banner .mgb-val   { font-weight: 700; font-size: var(--fs-xl); line-height: 1; }
 #market-gold-banner .mgb-label { font-size: var(--fs-xs); letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-top: 2px; }
 
-/* ─── Phase button ──────────────────────────────────────── */
 #phase-btn {
   font-family: var(--font);
   font-size: var(--fs-sm);
@@ -708,7 +669,6 @@ body {
   cursor: default;
 }
 
-/* Quick Play All button */
 #quick-play-btn {
   font-family: var(--font);
   font-size: var(--fs-sm);
@@ -727,7 +687,6 @@ body {
   color: var(--text-hi);
 }
 
-/* ─── Market upgrade slot ───────────────────────────────── */
 #market-upgrade-slot {
   display: none;
   justify-content: center;
@@ -766,8 +725,6 @@ body {
   text-transform: uppercase;
 }
 
-/* Phase 7 — Forge button: distinct red/orange so it doesn't blend with
-   the gold market-upgrade affordance. Sits in #market-upgrade-slot. */
 .forge-btn {
   font-family: var(--font);
   font-size: var(--fs-sm);
@@ -807,7 +764,6 @@ body {
 }
 #fight-board.bazaar #market-board-label { display: block; }
 
-/* ─── Defence / Shield display ──────────────────────────── */
 #shields-display {
   display: flex;
   gap: 16px;
@@ -827,7 +783,6 @@ body {
 .shield-pill.mon-shield { border-color: var(--red);   color: var(--red2);  }
 .shield-pill.hidden     { opacity: 0; }
 
-/* ─── Turn counter ──────────────────────────────────────── */
 #turn-counter {
   font-size: var(--fs-sm);
   color: var(--text-dim);
@@ -835,7 +790,6 @@ body {
   padding: 0 6px;
 }
 
-/* ─── Right panel ───────────────────────────────────────── */
 #fight-side {
   width: 280px;
   flex-shrink: 0;
@@ -846,7 +800,6 @@ body {
   overflow: hidden;
 }
 
-/* Card preview */
 #preview-area {
   padding: 10px;
   border-bottom: 1px solid var(--border);
@@ -883,7 +836,6 @@ body {
 #preview-card .card-art  { flex: 1; min-height: 0; }
 #preview-card .card-desc { font-size: var(--fs-sm); padding: 5px 6px; max-height: none; overflow: visible; color: var(--text-hi); }
 
-/* ─── Combat log ────────────────────────────────────────── */
 #log-area {
   flex: 1;
   display: flex;
@@ -927,9 +879,6 @@ body {
 .log-entry.log-lose    { color: var(--red2);  font-weight: 600; }
 .log-entry.log-effect  { color: #88aadd; }
 
-/* ─────────────────────────────────────────────────────────────
-   POST-FIGHT UPGRADE
-───────────────────────────────────────────────────────────── */
 #screen-upgrade {
   flex-direction: column;
   align-items: center;
@@ -993,9 +942,6 @@ body {
   max-width: 120px;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   RUN SUMMARY
-───────────────────────────────────────────────────────────── */
 #screen-summary {
   flex-direction: column;
   align-items: center;
@@ -1042,9 +988,6 @@ body {
 .summary-fight-result.won  { color: var(--gold2); }
 .summary-fight-result.lost { color: var(--red2);  }
 
-/* ─────────────────────────────────────────────────────────────
-   BUTTONS
-───────────────────────────────────────────────────────────── */
 .btn {
   font-family: var(--font);
   font-size: var(--fs-sm);
@@ -1076,9 +1019,6 @@ body {
   pointer-events: none;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   NOTIFICATION FLASH
-───────────────────────────────────────────────────────────── */
 #notification {
   position: fixed;
   top: 50%;
@@ -1102,9 +1042,6 @@ body {
 }
 #notification.visible { visibility: visible; opacity: 1; }
 
-/* ─────────────────────────────────────────────────────────────
-   UTILITY
-───────────────────────────────────────────────────────────── */
 .screen-hint {
   font-size: var(--fs-sm);
   color: var(--text-dim);
@@ -1114,9 +1051,6 @@ body {
 }
 .screen-hint.narrow { max-width: 320px; }
 
-/* ─────────────────────────────────────────────────────────────
-   RESOLUTION ORDER ARROWS
-───────────────────────────────────────────────────────────── */
 .order-arrow-row {
   display: flex;
   align-items: center;
@@ -1145,7 +1079,6 @@ body {
   white-space: nowrap;
 }
 
-/* Monster arrow: crimson/dark red palette */
 .monster-arrow-row { margin-bottom: 2px; }
 .monster-track { flex-direction: row-reverse; }
 .monster-label {
@@ -1153,27 +1086,18 @@ body {
   text-shadow: 0 0 6px #991b1b88;
 }
 
-/* Hero arrow: amber/gold palette */
 .hero-arrow-row { margin-top: 2px; }
 .hero-label {
   color: #fbbf24;
   text-shadow: 0 0 6px #b4530988;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   INITIAL HIDDEN STATES
-   (previously inline style="display:none" in index.html)
-───────────────────────────────────────────────────────────── */
 #monster-order-arrow,
 #hero-order-arrow,
 #quick-play-btn {
   display: none;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   EVENT SCREEN (Phase 10)
-   Between-fight moral choice. Centered narrative + N buttons.
-───────────────────────────────────────────────────────────── */
 #screen-event {
   display: none;
   align-items: center;
@@ -1246,11 +1170,6 @@ body {
   font-weight: 400;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   TREASURE INVENTORY (Phase 5)
-   Sits in the stats bar. Each treasure is a small gold chip with
-   a tooltip describing its effect.
-───────────────────────────────────────────────────────────── */
 #treasure-inventory {
   display: flex;
   flex-wrap: wrap;
@@ -1272,13 +1191,7 @@ body {
   cursor: help;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   TREASURE CARDS (Phase 5)
-   Displayed on the upgrade screen alongside Promoted Heroes.
-   Distinct gold/violet palette so the player immediately reads them
-   as a different class of reward.
-───────────────────────────────────────────────────────────── */
-.upgrade-choice-treasure { /* hover/active styles inherit from .upgrade-choice */ }
+.upgrade-choice-treasure {  }
 
 .upgrade-label-treasure {
   color: var(--gold2) !important;
@@ -1315,11 +1228,6 @@ body {
   padding: 0 8px;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   KEYWORD CHIPS (Phase 2)
-   Small uppercase chips under the card description. Players learn
-   the shared vocabulary by spotting the same chip on multiple cards.
-───────────────────────────────────────────────────────────── */
 .card-keywords {
   display: flex;
   flex-wrap: wrap;
@@ -1345,11 +1253,6 @@ body {
 .kw-charge    { color: #fcd34d; border-color: #d97706; background: #1a1004; }
 .kw-echo      { color: #c4b5fd; border-color: #6d28d9; background: #0f0a1a; }
 
-/* ─────────────────────────────────────────────────────────────
-   BIG BAD INTENT PANEL (Phase 1)
-   Sits above the monster row. Tells the player exactly what the
-   Big Bad will do next turn so fights become puzzles.
-───────────────────────────────────────────────────────────── */
 .bb-intent-panel {
   display: flex;
   flex-wrap: wrap;

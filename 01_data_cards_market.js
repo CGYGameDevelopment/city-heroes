@@ -1,14 +1,5 @@
-// cards_market.js
-// All recruitable hero cards available in the Market pool.
-// Cards are type 'hero' and have a non-zero cost.
-// Do not add engine logic to this file.
-// Calls Registry.register_cards_market() — registry.js must load first.
 
 Registry.register_cards_market([
-
-  // ─────────────────────────────────────────────────────────────
-  // PHYSICAL — Level 1
-  // ─────────────────────────────────────────────────────────────
 
   {
     id:       'soldier',
@@ -27,10 +18,6 @@ Registry.register_cards_market([
     desc:     'Deal 5 Physical damage. +1 ATK with another Physical hero on the field.',
     art:      make_art_painter('physical'),
   },
-
-  // ─────────────────────────────────────────────────────────────
-  // PHYSICAL — Level 2
-  // ─────────────────────────────────────────────────────────────
 
   {
     id:       'spearman',
@@ -168,10 +155,6 @@ Registry.register_cards_market([
     art:      make_art_painter('physical'),
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // PHYSICAL — Level 3
-  // ─────────────────────────────────────────────────────────────
-
   {
     id:       'veteran',
     role:     'physical',
@@ -266,10 +249,6 @@ Registry.register_cards_market([
     art:      make_art_painter('physical'),
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // PHYSICAL — Level 4
-  // ─────────────────────────────────────────────────────────────
-
   {
     id:       'warbringer',
     role:     'physical',
@@ -324,10 +303,6 @@ Registry.register_cards_market([
     desc:     'Stun all Monsters opposite this card\'s slot.',
     art:      make_art_painter('physical'),
   },
-
-  // ─────────────────────────────────────────────────────────────
-  // PHYSICAL — Level 5
-  // ─────────────────────────────────────────────────────────────
 
   {
     id:       'dragonslayer',
@@ -398,10 +373,6 @@ Registry.register_cards_market([
     art:      make_art_painter('magical'),
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // MAGICAL — Level 2
-  // ─────────────────────────────────────────────────────────────
-
   {
     id:       'conjurer',
     role:     'magical',
@@ -456,10 +427,6 @@ Registry.register_cards_market([
     desc:     'Restore 3 Morale. Draw 1 card.',
     art:      make_art_painter('magical'),
   },
-
-  // ─────────────────────────────────────────────────────────────
-  // MAGICAL — Level 3
-  // ─────────────────────────────────────────────────────────────
 
   {
     id:       'hexblade',
@@ -553,10 +520,6 @@ Registry.register_cards_market([
     desc:     'Recall a random Hero from discard.',
     art:      make_art_painter('magical'),
   },
-
-  // ─────────────────────────────────────────────────────────────
-  // MAGICAL — Level 4
-  // ─────────────────────────────────────────────────────────────
 
   {
     id:       'oracle',
@@ -655,10 +618,6 @@ Registry.register_cards_market([
     art:      make_art_painter('magical'),
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // MAGICAL — Level 5
-  // ─────────────────────────────────────────────────────────────
-
   {
     id:       'grand_wizard',
     role:     'magical',
@@ -716,10 +675,6 @@ Registry.register_cards_market([
     art:      make_art_painter('magical'),
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // TACTICAL — Level 1
-  // ─────────────────────────────────────────────────────────────
-
   {
     id:       'merchant',
     role:     'tactical',
@@ -776,10 +731,6 @@ Registry.register_cards_market([
     art:      make_art_painter('tactical'),
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // TACTICAL — Level 2
-  // ─────────────────────────────────────────────────────────────
-
   {
     id:       'informant',
     role:     'tactical',
@@ -817,10 +768,6 @@ Registry.register_cards_market([
     desc:     'Gain 2 Gold. Your next recruit this turn costs 2 less Gold.',
     art:      make_art_painter('tactical'),
   },
-
-  // ─────────────────────────────────────────────────────────────
-  // TACTICAL — Level 3
-  // ─────────────────────────────────────────────────────────────
 
   {
     id:       'guildmaster',
@@ -962,15 +909,6 @@ Registry.register_cards_market([
     art:      make_art_painter('tactical'),
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // TACTICAL — Level 5
-  // ─────────────────────────────────────────────────────────────
-
-  // ─────────────────────────────────────────────────────────────
-  // FACTION PAYOFF CARDS (Phase 3)
-  // These cards scale with how many same-faction allies are on the field.
-  // ─────────────────────────────────────────────────────────────
-
   {
     id:       'spellblade',
     role:     'magical',
@@ -1027,12 +965,6 @@ Registry.register_cards_market([
     desc:     'Gain 1 Gold. +2 Gold per other Tactical hero on the field.',
     art:      make_art_painter('tactical'),
   },
-
-  // ─────────────────────────────────────────────────────────────
-  // KEYWORD SHOWCASE CARDS (Phase 2)
-  // These cards introduce the keyword vocabulary. Each is built so that
-  // its keyword is the *thing* that makes it interesting at its cost.
-  // ─────────────────────────────────────────────────────────────
 
   {
     id:       'siege_breaker',
