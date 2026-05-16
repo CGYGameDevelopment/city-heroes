@@ -6,6 +6,25 @@ export const HAND_SIZE              = 5;
 export const MARKET_SIZE_DEFAULT    = 3;
 export const FIELD_SIZE_MAX         = 6;
 /**
+ * Maximum stacks of monster 'enrage' that can apply to a single Big Bad in
+ * one fight. Caps a degenerate case where many small enrage cards could
+ * permanently push the Big Bad's ATK to game-ending levels with no counterplay.
+ * The hero 'inspire' effect clears all current enrage stacks (resets to base).
+ */
+export const ENRAGE_MAX_STACK       = 4;
+/**
+ * Number of city options offered to the player at run start.
+ * Chosen city persists for the entire run.
+ */
+export const CITY_CHOICE_COUNT      = 3;
+/**
+ * Number of recruited (hero-type) cards that survive into the next fight.
+ * After each victorious fight, this many hero cards from the player's
+ * cumulative recruit history are added to the next fight's deck (in addition
+ * to the standard starters + any promoted cards). null means "keep all".
+ */
+export const RECRUITS_KEPT_PER_FIGHT = null;
+/**
  * Length of the market array. Currently equal to FIELD_SIZE_MAX because the
  * market row and hero field share the same width by design — one slot per hero
  * position. Kept as a separate constant so market logic does not silently depend

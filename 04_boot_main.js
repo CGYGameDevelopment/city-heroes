@@ -27,7 +27,7 @@ import {
   start_new_run, begin_fight, on_phase_btn, quick_play_all,
   on_hand_card_click, on_hero_slot_click,
   on_market_card_click, on_unlock_market_slot, on_upgrade_market_click,
-  apply_upgrade,
+  apply_upgrade, on_city_select,
   // Engine query helpers passed to renderer via setupEventListeners
   get_effective_market_size, get_slot_unlock_cost, get_card_cost,
   create_card_instance, shuffle_array,
@@ -37,6 +37,7 @@ import {
   render, log_entry, log_phase, flash_notification,
   clear_hand_selection,
   show_prefight_screen, show_upgrade_screen, show_summary_screen, show_screen,
+  show_city_select_screen,
   setupEventListeners,
 } from './03_ui_renderer.js';
 
@@ -70,6 +71,7 @@ const VALID_EFFECT_TYPES     = new Set([
   'chain_bonus', 'multistrike', 'lifesteal', 'bulwark',
   'scaling_atk', 'sacrifice',
   'corrupt', 'enrage',
+  'bodyguard', 'inspire',
 ]);
 
 // ─────────────────────────────────────────────────────────────
@@ -267,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
     show_upgrade_screen,
     show_summary_screen,
     show_screen,
+    show_city_select_screen,
   });
 
   // ── Step 2: Validate ───────────────────────────────────────
@@ -386,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
     on_unlock_market_slot,
     on_upgrade_market_click,
     apply_upgrade,
+    on_city_select,
     // Query helpers
     get_effective_market_size,
     get_slot_unlock_cost,

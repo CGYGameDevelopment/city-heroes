@@ -24,6 +24,7 @@ import {
   MONSTER_SLOTS, FIGHTS_PER_RUN, DRAW_PHASE_DELAY_MS, RESOLVE_STEP_DELAY_MS,
   FIGHT_END_DELAY_MS, BIG_BAD_PHASE_DELAY_MS, MARKET_LEVEL_START,
   MARKET_LEVEL_MAX, MARKET_UPGRADE_COSTS, MARKET_SLOT_UNLOCK_BASE,
+  CITY_CHOICE_COUNT, RECRUITS_KEPT_PER_FIGHT,
 } from './00_core_constants.js';
 
 import { App } from './00_core_app.js';
@@ -57,7 +58,7 @@ export function init_engine(renderer_fns) {
   const REQUIRED = [
     'render', 'log_entry', 'log_phase', 'flash_notification',
     'clear_hand_selection', 'show_prefight_screen', 'show_upgrade_screen',
-    'show_summary_screen', 'show_screen',
+    'show_summary_screen', 'show_screen', 'show_city_select_screen',
   ];
   const missing = REQUIRED.filter(k => typeof renderer_fns[k] !== 'function');
   if (missing.length > 0) {
@@ -216,6 +217,17 @@ function init_run_state() {
     deck:         [],
     hand:         [],
     discard:      [],
+    // ── Run-scoped persistence (new) ───────────────────────────
+    // city_id: chosen by the player at run start; locked for the whole run.
+    // recruits_owned: hero-type card defs purchased across all fights.
+    //   Carried into next fight's deck by rebuild_player_deck so the player's
+    //   recruit choices actually build a personality across the run.
+    // market_level / market_unlocked_slots: persisted so market progress in
+    //   fight 1 carries into fight 2/3 — a market investment now matters.
+    city_id:               null,
+    recruits_owned:        [],
+    market_level:          MARKET_LEVEL_START,
+    market_unlocked_slots: 0,
   };
 }
 
@@ -223,7 +235,7 @@ function init_run_state() {
  * Creates the fight-scoped state that is reset at the start of each fight.
  * Receives the city and big_bad instances for this fight.
  */
-function init_fight_state(city, big_bad) {
+function init_fight_state(city, big_bad, run) {
   return {
     city,
     big_bad,
@@ -234,10 +246,20 @@ function init_fight_state(city, big_bad) {
     hero_field:            Array(FIELD_SIZE_MAX).fill(null),
     monster_field:         Array(MONSTER_SLOTS).fill(null),
     monster_excluded_ids:  new Set(),
-    market_level:          MARKET_LEVEL_START,
-    market_unlocked_slots: 0,
+    // Market progress is now persisted on the run namespace. We mirror it onto
+    // the fight namespace so existing engine/UI code reading state.fight.market_*
+    // continues to work; writes are forwarded back to run in market upgrade fns.
+    market_level:          run.market_level,
+    market_unlocked_slots: run.market_unlocked_slots,
     market:                null,  // filled after city is known
     fight_result:          null,  // 'won' | 'lost' | null
+    // Slot index where the Big Bad's own ATK card lives this turn — useful for
+    // the renderer to telegraph which slot is the boss. Set by run_big_bad_phase.
+    big_bad_atk_slot:      -1,
+    // Bodyguard charges granted by hero effects this fight. Each charge
+    // intercepts one 'kill' monster effect. Persists across turns within the
+    // fight (resets at fight start).
+    bodyguard_charges:     0,
   };
 }
 
@@ -276,7 +298,25 @@ export function start_new_run() {
     fight: null,   // set by advance_to_next_fight
     turn:  null,   // set by reset_turn_state
   };
-  advance_to_next_fight(App.game_state);
+
+  // City selection — pick CITY_CHOICE_COUNT options at random and let the
+  // player choose. The choice is locked for the rest of the run.
+  // If there are fewer cities defined than the choice count, just show all of them.
+  const all_cities = Registry.cities;
+  const n_options  = Math.min(CITY_CHOICE_COUNT, all_cities.length);
+  const options    = shuffle_array(all_cities).slice(0, n_options);
+  _renderer.show_city_select_screen(App.game_state, options);
+}
+
+/**
+ * Called by the renderer when the player picks a city. Locks the city onto
+ * the run namespace and begins fight 1.
+ */
+export function on_city_select(city_id) {
+  const state = App.game_state;
+  if (!state || state.run.city_id !== null) return;
+  state.run.city_id = city_id;
+  advance_to_next_fight(state);
 }
 
 function advance_to_next_fight(state) {
@@ -291,11 +331,13 @@ function advance_to_next_fight(state) {
   }
 
   const big_bad = create_big_bad_instance(pick_random(big_bad_pool));
-  const city    = pick_random(Registry.cities);
+  // City is now locked for the run — read from run state, fall back to random
+  // for safety if somehow not selected (shouldn't happen in normal flow).
+  const city    = Registry.cities.find(c => c.id === state.run.city_id) ?? pick_random(Registry.cities);
 
   rebuild_player_deck(state);
 
-  state.fight = init_fight_state(city, big_bad);
+  state.fight = init_fight_state(city, big_bad, state.run);
   state.fight.market = fill_market(get_city_market_size(city), state.fight.market_level);
 
   state.turn = init_turn_state();
@@ -305,26 +347,48 @@ function advance_to_next_fight(state) {
 
 /**
  * Rebuilds the player's deck for the next fight from the run's card pool.
- * Promoted cards accumulated through upgrades are carried forward,
- * each replacing a random starter in the fresh deck.
+ *
+ * Three things carry forward between fights:
+ *   1. Promoted cards (chosen at upgrade screen) — each replaces a random
+ *      starter, becoming permanent run-level power.
+ *   2. Recruited hero cards (state.run.recruits_owned) — every hero the player
+ *      bought in a previous fight comes back into the deck. RECRUITS_KEPT_PER_FIGHT
+ *      controls subsetting (null = keep all).
+ *   3. Filler starters — remaining slots are filled with the standard starter set.
+ *
+ * Together these make the run feel like an actual deck-builder rather than three
+ * disconnected market puzzles.
  */
 function rebuild_player_deck(state) {
   const run = state.run;
   const all_zones = [...run.deck, ...run.hand, ...run.discard];
   const promoted  = all_zones.filter(c => c.type === 'promoted');
 
+  // 1. Fresh starter deck.
   const fresh_deck      = Registry.cards_starter.map(def => create_card_instance(def));
   const starter_indices = fresh_deck.reduce((acc, c, i) => {
     if (c.type === 'starter') acc.push(i);
     return acc;
   }, []);
 
+  // 2. Insert promoted cards by overwriting random starter slots.
   for (const p of promoted) {
     if (starter_indices.length === 0) break;
     const pick          = Math.floor(Math.random() * starter_indices.length);
     const replace_index = starter_indices.splice(pick, 1)[0];
     const def           = find_card_def_by_id(p.id) ?? p;
     fresh_deck[replace_index] = create_card_instance(def);
+  }
+
+  // 3. Append recruited heroes from prior fights. Either all of them, or a
+  //    random subset of RECRUITS_KEPT_PER_FIGHT.
+  let recruits_to_keep = run.recruits_owned ?? [];
+  if (RECRUITS_KEPT_PER_FIGHT !== null && recruits_to_keep.length > RECRUITS_KEPT_PER_FIGHT) {
+    recruits_to_keep = shuffle_array(recruits_to_keep).slice(0, RECRUITS_KEPT_PER_FIGHT);
+  }
+  for (const recruit_id of recruits_to_keep) {
+    const def = find_card_def_by_id(recruit_id);
+    if (def) fresh_deck.push(create_card_instance(def));
   }
 
   run.deck    = shuffle_array(fresh_deck);
@@ -538,16 +602,23 @@ function run_big_bad_phase(state) {
     );
   }
 
-  const all_monster_cards = shuffle_array([create_atk_card(big_bad), ...drawn_monsters])
+  const atk_card         = create_atk_card(big_bad);
+  const all_monster_cards = shuffle_array([atk_card, ...drawn_monsters])
     .slice(0, MONSTER_SLOTS);
 
   state.fight.monster_field = Array(MONSTER_SLOTS).fill(null);
+  state.fight.big_bad_atk_slot = -1;
 
   const available_slots = shuffle_array([...Array(MONSTER_SLOTS).keys()]);
   for (let i = 0; i < all_monster_cards.length; i++) {
     all_monster_cards[i].active   = true;
     all_monster_cards[i].resolved = false;
     state.fight.monster_field[available_slots[i]] = all_monster_cards[i];
+    // Remember where the Big Bad's direct ATK landed so the renderer can
+    // telegraph it (allows the player to position 'stun opposite' counters).
+    if (all_monster_cards[i].uid === atk_card.uid) {
+      state.fight.big_bad_atk_slot = available_slots[i];
+    }
   }
 
   state.fight.city_def       = get_city_initial_def(state.fight.city);
@@ -592,19 +663,52 @@ export function on_hero_slot_click(slot_index) {
   }
 }
 
-/** Automatically places every hand card into the first available hero slot. */
+/**
+ * Returns a sort score for a hand card during quick-play auto-ordering.
+ * Lower = placed earlier (resolves earlier — heroes resolve left→right).
+ *
+ * Goal: place combo/chain *enablers* (cards that don't need anyone to have
+ * resolved first) early so that combo/chain *payoffs* (which check
+ * already-resolved heroes) fire later in the same turn.
+ *
+ * Tiers:
+ *   0  — pure enablers (no combo/chain effect)
+ *   1  — neutral
+ *   2  — combo_bonus / chain_bonus payoffs (need prior allies)
+ *   3  — scaling_atk / sacrifice (benefit from state built up earlier)
+ */
+function quick_play_score(card) {
+  let score = 1;
+  for (const e of card.effects ?? []) {
+    if (e.type === 'combo_bonus' || e.type === 'chain_bonus') score = Math.max(score, 2);
+    if (e.type === 'scaling_atk' || e.type === 'sacrifice')   score = Math.max(score, 3);
+  }
+  return score;
+}
+
+/**
+ * Automatically places every hand card into hero slots.
+ * Order is intentional: combo/chain enablers first, payoffs last, so left-to-right
+ * resolution actually fires the combos the player has assembled. Slot-aware:
+ * skips already-occupied slots in left-to-right order.
+ */
 export function quick_play_all() {
   const state = App.game_state;
   if (!state || state.turn.phase !== 'HEROES') return;
   _renderer.clear_hand_selection();
 
-  for (let i = 0; i < state.fight.hero_field.length; i++) {
-    if (state.fight.hero_field[i]) continue;
-    if (state.run.hand.length === 0) break;
-    const card = state.run.hand.shift();
+  // Sort a copy by quick-play score, then remove the sorted cards from the
+  // hand one-by-one as we place them so the original hand array is updated.
+  const sorted = [...state.run.hand].sort((a, b) => quick_play_score(a) - quick_play_score(b));
+  for (const card of sorted) {
+    const empty_slot = state.fight.hero_field.findIndex(s => s === null);
+    if (empty_slot === -1) break;
+    const hand_idx = state.run.hand.indexOf(card);
+    if (hand_idx === -1) continue;
+    state.run.hand.splice(hand_idx, 1);
     card.active   = true;
     card.resolved = false;
-    state.fight.hero_field[i] = card;
+    state.fight.hero_field[empty_slot] = card;
   }
   _renderer.render();
 }
@@ -920,9 +1024,14 @@ function finish_resolution(state) {
     card.active   = false;
     card.resolved = false;
     // _scrap_after_resolve (set by the 'scrap_self' effect) banishes the card
-    // from the run instead of returning it to the discard pile.
+    // from the run instead of returning it to the discard pile. Also strip
+    // it from run.recruits_owned so it doesn't come back next fight.
     if (card._scrap_after_resolve) {
       _renderer.log_entry(`${card.name} is banished from your deck.`, 'log-effect');
+      if (Array.isArray(state.run.recruits_owned)) {
+        const ridx = state.run.recruits_owned.indexOf(card.id);
+        if (ridx !== -1) state.run.recruits_owned.splice(ridx, 1);
+      }
     } else {
       state.run.discard.push(card);
     }
@@ -976,6 +1085,9 @@ export function on_market_card_click(uid) {
   state.turn.cost_reduce_next  = 0;
   state.fight.market[idx]      = null;
   state.run.discard.push(card);
+  // Track for cross-fight persistence — only the heroes the player actually
+  // bought are remembered, never starters or promoted.
+  if (card.type === 'hero') state.run.recruits_owned.push(card.id);
   _renderer.log_entry(`Recruited ${card.name} (cost ${recruit_cost}).`, 'log-phase');
   _renderer.render();
 }
@@ -999,6 +1111,8 @@ export function on_unlock_market_slot() {
 
   state.fight.gold_pool             -= cost;
   state.fight.market_unlocked_slots += 1;
+  // Persist on run namespace so the unlocked slot survives into the next fight.
+  state.run.market_unlocked_slots = state.fight.market_unlocked_slots;
   _renderer.log_entry(`Market slot unlocked (cost ${cost} Gold).`, 'log-phase');
   _renderer.render();
 }
@@ -1019,6 +1133,8 @@ export function on_upgrade_market_click() {
 
   state.fight.gold_pool    -= cost;
   state.fight.market_level  = target_level;
+  // Persist on run namespace — market tier carries into the next fight.
+  state.run.market_level    = target_level;
   _renderer.log_entry(`Market upgraded to Level ${target_level}! (cost ${cost} Gold)`, 'log-phase');
   _renderer.render();
 }
