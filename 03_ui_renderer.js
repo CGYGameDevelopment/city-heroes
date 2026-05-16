@@ -6,6 +6,21 @@ import {
 
 import { App } from './00_core_app.js';
 
+const SIDE_HERO                       = 'H';
+const SIDE_MONSTER                    = 'M';
+const SVG_NAMESPACE                   = 'http://www.w3.org/2000/svg';
+const IN_FIGHT_SPRITE_SIZE            = 64;
+const CARD_CANVAS_LARGE_WIDTH         = 180;
+const CARD_CANVAS_LARGE_HEIGHT        = 140;
+const CARD_CANVAS_NORMAL_WIDTH        = 120;
+const CARD_CANVAS_NORMAL_HEIGHT       = 100;
+const LOCKED_SLOT_CANVAS_WIDTH        = 128;
+const LOCKED_SLOT_CANVAS_HEIGHT       = 148;
+const NOTIFICATION_DURATION_MS        = 1200;
+const BADGE_TWO_DIGIT_FONT_THRESHOLD  = 9;
+const WEAK_BONUS_DISPLAY_PERCENT      = 50;
+const RESIST_PENALTY_DISPLAY_PERCENT  = 50;
+
 let _start_new_run;
 let _begin_fight;
 let _on_phase_btn;
@@ -47,58 +62,58 @@ export function render() {
 }
 
 function render_treasures(state) {
-  const panel = document.getElementById('treasure-inventory');
-  if (!panel) return;
-  panel.replaceChildren();
-  const treasures = state.run.treasures ?? [];
-  if (treasures.length === 0) return;
-  for (const t of treasures) {
-    const chip = document.createElement('span');
-    chip.className   = 'treasure-chip';
-    chip.textContent = '✦ ' + t.name;
-    chip.title       = t.desc;
-    panel.appendChild(chip);
+  const treasure_panel = document.getElementById('treasure-inventory');
+  if (!treasure_panel) return;
+  treasure_panel.replaceChildren();
+  const owned_treasures = state.run.treasures ?? [];
+  if (owned_treasures.length === 0) return;
+  for (const treasure of owned_treasures) {
+    const treasure_chip = document.createElement('span');
+    treasure_chip.className   = 'treasure-chip';
+    treasure_chip.textContent = '✦ ' + treasure.name;
+    treasure_chip.title       = treasure.desc;
+    treasure_panel.appendChild(treasure_chip);
   }
 }
 
 function render_stats(state) {
-  const phase    = state.turn.phase;
-  const phase_btn = document.getElementById('phase-btn');
+  const phase          = state.turn.phase;
+  const phase_btn_el   = document.getElementById('phase-btn');
 
   document.getElementById('turn-num').textContent        = state.turn.turn_number + 1;
   document.getElementById('gold-val').textContent        = state.fight.gold_pool;
   document.getElementById('market-gold-val').textContent = state.fight.gold_pool;
 
   if (phase === 'DRAW' || phase === 'BIG_BAD') {
-    phase_btn.textContent = phase === 'DRAW' ? 'Drawing...' : 'Big Bad...';
-    phase_btn.disabled    = true;
+    phase_btn_el.textContent = phase === 'DRAW' ? 'Drawing...' : 'Big Bad...';
+    phase_btn_el.disabled    = true;
   } else if (phase === 'HEROES') {
-    phase_btn.textContent = 'End Heroes';
-    phase_btn.disabled    = false;
+    phase_btn_el.textContent = 'End Heroes';
+    phase_btn_el.disabled    = false;
   } else if (phase.startsWith('RESOLVING')) {
-    phase_btn.textContent = 'Resolving...';
-    phase_btn.disabled    = true;
+    phase_btn_el.textContent = 'Resolving...';
+    phase_btn_el.disabled    = true;
   } else if (phase === 'RECRUIT') {
-    phase_btn.textContent = 'End Recruit';
-    phase_btn.disabled    = false;
+    phase_btn_el.textContent = 'End Recruit';
+    phase_btn_el.disabled    = false;
   } else {
-    phase_btn.textContent = '—';
-    phase_btn.disabled    = true;
+    phase_btn_el.textContent = '—';
+    phase_btn_el.disabled    = true;
   }
 
-  const quick_play_btn = document.getElementById('quick-play-btn');
-  quick_play_btn.style.display = (phase === 'HEROES') ? 'inline-block' : 'none';
+  const quick_play_btn_el = document.getElementById('quick-play-btn');
+  quick_play_btn_el.style.display = (phase === 'HEROES') ? 'inline-block' : 'none';
 }
 
 function render_big_bad(state) {
-  const bb = state.fight.big_bad;
-  if (!bb) return;
-  document.getElementById('bb-name').textContent = bb.name;
-  document.getElementById('bb-sub').textContent  = bb.title;
-  document.getElementById('bb-hp').textContent   = `${bb.hp}/${bb.max_hp}`;
-  document.getElementById('bb-atk').textContent  = bb.atk;
-  document.getElementById('bb-mpt').textContent  = bb.monsters_per_turn;
-  paint_sprite_scaled(document.getElementById('bb-sprite'), big_bad_art[bb.id], 64, 64);
+  const big_bad = state.fight.big_bad;
+  if (!big_bad) return;
+  document.getElementById('bb-name').textContent = big_bad.name;
+  document.getElementById('bb-sub').textContent  = big_bad.title;
+  document.getElementById('bb-hp').textContent   = `${big_bad.hp}/${big_bad.max_hp}`;
+  document.getElementById('bb-atk').textContent  = big_bad.atk;
+  document.getElementById('bb-mpt').textContent  = big_bad.monsters_per_turn;
+  paint_sprite_scaled(document.getElementById('bb-sprite'), big_bad_art[big_bad.id], IN_FIGHT_SPRITE_SIZE, IN_FIGHT_SPRITE_SIZE);
 }
 
 function render_city(state) {
@@ -109,152 +124,152 @@ function render_city(state) {
   document.getElementById('city-morale').textContent      = `${state.fight.city_morale}/${city.max_morale}`;
   document.getElementById('city-def-display').textContent = state.fight.city_def;
   document.getElementById('city-effects-mini').textContent =
-    city.effects.map(e => e.desc).join(' | ');
+    city.effects.map(city_effect => city_effect.desc).join(' | ');
 
-  const effective = _get_effective_market_size(state);
-  document.getElementById('city-market-size').textContent = `${effective}/${FIELD_SIZE_MAX}`;
+  const effective_market_size = _get_effective_market_size(state);
+  document.getElementById('city-market-size').textContent = `${effective_market_size}/${FIELD_SIZE_MAX}`;
 
-  paint_sprite_scaled(document.getElementById('city-sprite'), city_art[city.id], 64, 64);
+  paint_sprite_scaled(document.getElementById('city-sprite'), city_art[city.id], IN_FIGHT_SPRITE_SIZE, IN_FIGHT_SPRITE_SIZE);
 }
 
 function render_intent(state) {
-  const panel = document.getElementById('bb-intent-panel');
-  if (!panel) return;
+  const intent_panel = document.getElementById('bb-intent-panel');
+  if (!intent_panel) return;
 
-  const intent = state.fight.next_intent;
-  if (!intent) { panel.replaceChildren(); panel.classList.add('hidden'); return; }
-  panel.classList.remove('hidden');
-  panel.replaceChildren();
+  const next_intent = state.fight.next_intent;
+  if (!next_intent) { intent_panel.replaceChildren(); intent_panel.classList.add('hidden'); return; }
+  intent_panel.classList.remove('hidden');
+  intent_panel.replaceChildren();
 
-  const label = document.createElement('span');
-  label.className   = 'bb-intent-label';
-  label.textContent = 'NEXT TURN:';
-  panel.appendChild(label);
+  const intent_label = document.createElement('span');
+  intent_label.className   = 'bb-intent-label';
+  intent_label.textContent = 'NEXT TURN:';
+  intent_panel.appendChild(intent_label);
 
   const atk_pill = document.createElement('span');
   atk_pill.className   = 'bb-intent-pill bb-intent-atk';
-  atk_pill.textContent = `⚔ ${intent.atk}`;
-  atk_pill.title       = `${state.fight.big_bad.name} will strike the city for ${intent.atk} damage.`;
-  panel.appendChild(atk_pill);
+  atk_pill.textContent = `⚔ ${next_intent.atk}`;
+  atk_pill.title       = `${state.fight.big_bad.name} will strike the city for ${next_intent.atk} damage.`;
+  intent_panel.appendChild(atk_pill);
 
-  if (intent.monsters.length === 0) {
-    const none = document.createElement('span');
-    none.className   = 'bb-intent-pill bb-intent-empty';
-    none.textContent = 'no summons';
-    panel.appendChild(none);
+  if (next_intent.monsters.length === 0) {
+    const none_pill = document.createElement('span');
+    none_pill.className   = 'bb-intent-pill bb-intent-empty';
+    none_pill.textContent = 'no summons';
+    intent_panel.appendChild(none_pill);
   } else {
-    for (const def of intent.monsters) {
-      const pill = document.createElement('span');
-      pill.className   = `bb-intent-pill bb-intent-monster role-${def.role}`;
-      pill.textContent = def.name;
-      pill.title       = def.desc;
-      panel.appendChild(pill);
+    for (const monster_def of next_intent.monsters) {
+      const monster_pill = document.createElement('span');
+      monster_pill.className   = `bb-intent-pill bb-intent-monster role-${monster_def.role}`;
+      monster_pill.textContent = monster_def.name;
+      monster_pill.title       = monster_def.desc;
+      intent_panel.appendChild(monster_pill);
     }
   }
 }
 
 function render_shields(state) {
-  const show_pill = (pill_id, val_id, value) => {
+  const show_pill = (pill_id, value_id, displayed_value) => {
     const pill_el  = document.getElementById(pill_id);
-    const value_el = document.getElementById(val_id);
-    if (value > 0) { pill_el.classList.remove('hidden'); value_el.textContent = value; }
-    else             pill_el.classList.add('hidden');
+    const value_el = document.getElementById(value_id);
+    if (displayed_value > 0) { pill_el.classList.remove('hidden'); value_el.textContent = displayed_value; }
+    else                       pill_el.classList.add('hidden');
   };
   show_pill('city-def-pill',   'city-def-val',  state.fight.city_def);
   show_pill('mon-shield-pill', 'mon-shield-val', state.fight.monster_shield);
 }
 
 function render_field(state) {
-  const phase          = state.turn.phase;
-  const is_recruit     = (phase === 'RECRUIT');
-  const monster_row_el = document.getElementById('monster-row');
-  const hero_row_el    = document.getElementById('hero-row');
-  const monster_arr_el = document.getElementById('monster-order-arrow');
-  const hero_arr_el    = document.getElementById('hero-order-arrow');
+  const phase              = state.turn.phase;
+  const is_recruit_phase   = (phase === 'RECRUIT');
+  const monster_row_el     = document.getElementById('monster-row');
+  const hero_row_el        = document.getElementById('hero-row');
+  const monster_arrow_el   = document.getElementById('monster-order-arrow');
+  const hero_arrow_el      = document.getElementById('hero-order-arrow');
 
-  if (is_recruit) {
+  if (is_recruit_phase) {
     monster_row_el.replaceChildren();
     hero_row_el.replaceChildren();
-    monster_arr_el.style.display = 'none';
-    hero_arr_el.style.display    = 'none';
+    monster_arrow_el.style.display = 'none';
+    hero_arrow_el.style.display    = 'none';
     return;
   }
 
   let resolving_hero_slot    = -1;
   let resolving_monster_slot = -1;
   if (phase === 'RESOLVING') {
-    const step = state.turn.active_resolution_sequence[state.turn.resolving_step];
-    if (step) {
-      if (step.side === 'H') resolving_hero_slot    = step.slot;
-      if (step.side === 'M') resolving_monster_slot = step.slot;
+    const resolving_step = state.turn.active_resolution_sequence[state.turn.resolving_step];
+    if (resolving_step) {
+      if (resolving_step.side === SIDE_HERO)    resolving_hero_slot    = resolving_step.slot;
+      if (resolving_step.side === SIDE_MONSTER) resolving_monster_slot = resolving_step.slot;
     }
   }
 
   monster_row_el.replaceChildren();
   monster_row_el.appendChild(make_spacer('monster-spacer-lead'));
-  for (let i = 0; i < MONSTER_SLOTS; i++) {
-    const card = state.fight.monster_field[i];
-    if (!card) {
-      const el = make_empty_slot('M' + (i + 1));
-      el.style.cursor = 'default';
-      monster_row_el.appendChild(el);
+  for (let monster_slot_index = 0; monster_slot_index < MONSTER_SLOTS; monster_slot_index++) {
+    const monster_card = state.fight.monster_field[monster_slot_index];
+    if (!monster_card) {
+      const empty_slot_el = make_empty_slot('M' + (monster_slot_index + 1));
+      empty_slot_el.style.cursor = 'default';
+      monster_row_el.appendChild(empty_slot_el);
     } else {
-      const el = make_card_element(card, false, i === resolving_monster_slot);
-      if (card.resolved) el.classList.add('inactive');
-      monster_row_el.appendChild(el);
+      const monster_card_el = make_card_element(monster_card, false, monster_slot_index === resolving_monster_slot);
+      if (monster_card.resolved) monster_card_el.classList.add('inactive');
+      monster_row_el.appendChild(monster_card_el);
     }
-    if (i < MONSTER_SLOTS - 1) monster_row_el.appendChild(make_spacer('monster-spacer'));
+    if (monster_slot_index < MONSTER_SLOTS - 1) monster_row_el.appendChild(make_spacer('monster-spacer'));
   }
   monster_row_el.appendChild(make_spacer('monster-spacer-lead'));
 
   const show_arrows = (phase === 'HEROES' || phase === 'RESOLVING');
-  monster_arr_el.style.display = show_arrows ? 'flex' : 'none';
+  monster_arrow_el.style.display = show_arrows ? 'flex' : 'none';
 
   hero_row_el.replaceChildren();
-  for (let i = 0; i < FIELD_SIZE_MAX; i++) {
+  for (let hero_slot_index = 0; hero_slot_index < FIELD_SIZE_MAX; hero_slot_index++) {
     hero_row_el.appendChild(make_spacer('hero-spacer'));
-    const card = state.fight.hero_field[i];
-    if (!card) {
-      const el = make_empty_slot('H' + (i + 1));
-      if (phase === 'HEROES') el.addEventListener('click', () => _on_hero_slot_click(i));
-      hero_row_el.appendChild(el);
+    const hero_card = state.fight.hero_field[hero_slot_index];
+    if (!hero_card) {
+      const empty_slot_el = make_empty_slot('H' + (hero_slot_index + 1));
+      if (phase === 'HEROES') empty_slot_el.addEventListener('click', () => _on_hero_slot_click(hero_slot_index));
+      hero_row_el.appendChild(empty_slot_el);
     } else {
-      const el = make_card_element(card, card.uid === App.ui_state.selected_hand_uid, i === resolving_hero_slot);
-      if (phase === 'HEROES') el.addEventListener('click', () => _on_hero_slot_click(i));
-      if (card.resolved) el.classList.add('inactive');
-      hero_row_el.appendChild(el);
+      const hero_card_el = make_card_element(hero_card, hero_card.uid === App.ui_state.selected_hand_uid, hero_slot_index === resolving_hero_slot);
+      if (phase === 'HEROES') hero_card_el.addEventListener('click', () => _on_hero_slot_click(hero_slot_index));
+      if (hero_card.resolved) hero_card_el.classList.add('inactive');
+      hero_row_el.appendChild(hero_card_el);
     }
   }
   hero_row_el.appendChild(make_spacer('hero-spacer'));
-  hero_arr_el.style.display = show_arrows ? 'flex' : 'none';
+  hero_arrow_el.style.display = show_arrows ? 'flex' : 'none';
 }
 
 function render_hand(state) {
   const hand_row_el = document.getElementById('hand-row');
   hand_row_el.replaceChildren();
-  for (const card of state.run.hand) {
-    const el = make_card_element(card, card.uid === App.ui_state.selected_hand_uid, false);
+  for (const hand_card of state.run.hand) {
+    const hand_card_el = make_card_element(hand_card, hand_card.uid === App.ui_state.selected_hand_uid, false);
     if (state.turn.phase === 'HEROES') {
-      el.classList.add('hand-card');
-      el.addEventListener('click', () => _on_hand_card_click(card.uid));
+      hand_card_el.classList.add('hand-card');
+      hand_card_el.addEventListener('click', () => _on_hand_card_click(hand_card.uid));
     }
-    hand_row_el.appendChild(el);
+    hand_row_el.appendChild(hand_card_el);
   }
 }
 
 function render_piles(state) {
-  const draw_count    = state.run.deck.length;
-  const discard_count = state.run.discard.length;
+  const draw_pile_count    = state.run.deck.length;
+  const discard_pile_count = state.run.discard.length;
 
-  const draw_widget = document.getElementById('draw-pile-widget');
-  document.getElementById('draw-pile-count').textContent = draw_count;
-  draw_widget.classList.toggle('empty', draw_count === 0);
+  const draw_pile_widget = document.getElementById('draw-pile-widget');
+  document.getElementById('draw-pile-count').textContent = draw_pile_count;
+  draw_pile_widget.classList.toggle('empty', draw_pile_count === 0);
 
-  const discard_widget = document.getElementById('discard-pile-widget');
-  const discard_face   = document.getElementById('discard-pile-face');
-  document.getElementById('discard-pile-count').textContent = discard_count;
-  discard_widget.classList.toggle('empty',     discard_count === 0);
-  discard_face.classList.toggle('has-cards',   discard_count > 0);
+  const discard_pile_widget = document.getElementById('discard-pile-widget');
+  const discard_pile_face   = document.getElementById('discard-pile-face');
+  document.getElementById('discard-pile-count').textContent = discard_pile_count;
+  discard_pile_widget.classList.toggle('empty',   discard_pile_count === 0);
+  discard_pile_face.classList.toggle('has-cards', discard_pile_count > 0);
 }
 
 function render_market(state) {
@@ -275,110 +290,110 @@ function render_market(state) {
 
   render_market_upgrade_slot(state);
 
-  const effective_size = _get_effective_market_size(state);
-  const slot_cost      = _get_slot_unlock_cost(state);
+  const effective_market_size = _get_effective_market_size(state);
+  const slot_unlock_cost      = _get_slot_unlock_cost(state);
 
-  for (let i = 0; i < FIELD_SIZE_MAX; i++) {
+  for (let market_slot_index = 0; market_slot_index < FIELD_SIZE_MAX; market_slot_index++) {
     hero_row_el.appendChild(make_spacer('hero-spacer'));
     hero_row_el.appendChild(
-      i < effective_size
-        ? make_market_active_slot(state, i)
-        : make_market_locked_slot(slot_cost, state.fight.gold_pool)
+      market_slot_index < effective_market_size
+        ? make_market_active_slot(state, market_slot_index)
+        : make_market_locked_slot(slot_unlock_cost, state.fight.gold_pool)
     );
   }
   hero_row_el.appendChild(make_spacer('hero-spacer'));
 }
 
 function render_market_upgrade_slot(state) {
-  const container  = document.getElementById('market-upgrade-slot');
-  container.replaceChildren();
+  const upgrade_slot_container = document.getElementById('market-upgrade-slot');
+  upgrade_slot_container.replaceChildren();
 
-  const next_level = state.fight.market_level + 1;
-  if (next_level > MARKET_LEVEL_MAX) {
-    const maxed = document.createElement('div');
-    maxed.className   = 'market-upgrade-maxed';
-    maxed.textContent = 'Market fully unlocked';
-    container.appendChild(maxed);
+  const next_market_level = state.fight.market_level + 1;
+  if (next_market_level > MARKET_LEVEL_MAX) {
+    const maxed_label = document.createElement('div');
+    maxed_label.className   = 'market-upgrade-maxed';
+    maxed_label.textContent = 'Market fully unlocked';
+    upgrade_slot_container.appendChild(maxed_label);
   } else {
-    const cost = MARKET_UPGRADE_COSTS[next_level];
-    if (cost === undefined) {
-      console.warn(`render_market_upgrade_slot: no cost defined for level ${next_level}.`);
+    const upgrade_cost = MARKET_UPGRADE_COSTS[next_market_level];
+    if (upgrade_cost === undefined) {
+      console.warn(`render_market_upgrade_slot: no cost defined for level ${next_market_level}.`);
     } else {
-      const can_afford = state.fight.gold_pool >= cost;
-      const btn        = document.createElement('button');
-      btn.className    = `market-upgrade-btn${can_afford ? '' : ' locked'}`;
-      btn.textContent  = `Unlock Level ${next_level} Cards — ${cost} Gold`;
-      btn.disabled     = !can_afford;
-      if (can_afford) btn.addEventListener('click', () => _on_upgrade_market_click());
-      container.appendChild(btn);
+      const can_afford_upgrade = state.fight.gold_pool >= upgrade_cost;
+      const upgrade_btn        = document.createElement('button');
+      upgrade_btn.className    = `market-upgrade-btn${can_afford_upgrade ? '' : ' locked'}`;
+      upgrade_btn.textContent  = `Unlock Level ${next_market_level} Cards — ${upgrade_cost} Gold`;
+      upgrade_btn.disabled     = !can_afford_upgrade;
+      if (can_afford_upgrade) upgrade_btn.addEventListener('click', () => _on_upgrade_market_click());
+      upgrade_slot_container.appendChild(upgrade_btn);
     }
   }
 
   const forge_cost = _get_forge_cost(state);
   if (forge_cost !== null) {
-    const can_afford = state.fight.gold_pool >= forge_cost;
-    const forge_btn  = document.createElement('button');
-    forge_btn.className   = `forge-btn${can_afford ? '' : ' locked'}`;
-    forge_btn.textContent = `🔥 Forge: scrap a Starter — ${forge_cost} Gold`;
-    forge_btn.title       = 'Permanently remove a random Starter from your deck. Cost rises with each use this fight.';
-    forge_btn.disabled    = !can_afford;
-    if (can_afford) forge_btn.addEventListener('click', () => _on_forge_click());
-    container.appendChild(forge_btn);
+    const can_afford_forge = state.fight.gold_pool >= forge_cost;
+    const forge_btn        = document.createElement('button');
+    forge_btn.className    = `forge-btn${can_afford_forge ? '' : ' locked'}`;
+    forge_btn.textContent  = `🔥 Forge: scrap a Starter — ${forge_cost} Gold`;
+    forge_btn.title        = 'Permanently remove a random Starter from your deck. Cost rises with each use this fight.';
+    forge_btn.disabled     = !can_afford_forge;
+    if (can_afford_forge) forge_btn.addEventListener('click', () => _on_forge_click());
+    upgrade_slot_container.appendChild(forge_btn);
   }
 }
 
-function make_market_active_slot(state, i) {
-  const card = state.fight.market[i];
-  if (!card) {
-    const el = make_empty_slot('');
-    el.style.cursor = 'default';
-    return el;
+function make_market_active_slot(state, market_slot_index) {
+  const market_card = state.fight.market[market_slot_index];
+  if (!market_card) {
+    const empty_slot_el = make_empty_slot('');
+    empty_slot_el.style.cursor = 'default';
+    return empty_slot_el;
   }
-  const recruit_cost = _get_card_cost(card, state.fight.city);
+  const recruit_cost = _get_card_cost(market_card, state.fight.city);
   const can_afford   = state.fight.gold_pool >= recruit_cost;
-  const el           = make_card_element(card, false, false, recruit_cost);
+  const card_el      = make_card_element(market_card, false, false, recruit_cost);
   if (can_afford) {
-    el.addEventListener('click', () => _on_market_card_click(card.uid));
+    card_el.addEventListener('click', () => _on_market_card_click(market_card.uid));
   } else {
-    el.style.opacity = '0.5';
-    el.style.cursor  = 'default';
+    card_el.style.opacity = '0.5';
+    card_el.style.cursor  = 'default';
   }
-  return el;
+  return card_el;
 }
 
-function make_market_locked_slot(slot_cost, gold_pool) {
-  const can_afford = slot_cost !== null && gold_pool >= slot_cost;
-  const el         = make_locked_slot(slot_cost, can_afford);
-  if (can_afford) el.addEventListener('click', () => _on_unlock_market_slot());
-  return el;
+function make_market_locked_slot(slot_unlock_cost, available_gold) {
+  const can_afford      = slot_unlock_cost !== null && available_gold >= slot_unlock_cost;
+  const locked_slot_el  = make_locked_slot(slot_unlock_cost, can_afford);
+  if (can_afford) locked_slot_el.addEventListener('click', () => _on_unlock_market_slot());
+  return locked_slot_el;
 }
 
 function render_card_preview(card) {
   if (!card) { clear_card_preview(); return; }
-  const el         = document.getElementById('preview-card');
+  const preview_el = document.getElementById('preview-card');
   const type_class = card.subtype === 'atk' ? 'card-atk' : `card-${card.type}`;
   const role_class = card.role ? `role-${card.role}` : '';
-  el.className     = `card ${type_class} ${role_class}`.trim();
-  render_card_into_element(card, el, true);
+  preview_el.className = `card ${type_class} ${role_class}`.trim();
+  render_card_into_element(card, preview_el, true);
 }
 
 function clear_card_preview() {
-  const el    = document.getElementById('preview-card');
-  el.className = 'card';
-  el.replaceChildren();
+  const preview_el     = document.getElementById('preview-card');
+  preview_el.className = 'card';
+  preview_el.replaceChildren();
 }
 
 function make_card_element(card, is_selected, is_resolving, display_cost = null) {
   const type_class = card.subtype === 'atk' ? 'card-atk' : `card-${card.type}`;
   const role_class = card.role ? `role-${card.role}` : '';
-  const el         = document.createElement('div');
-  el.className     = `card ${type_class} ${role_class}`.trim();
-  if (is_selected)  el.classList.add('selected-from-hand');
-  if (is_resolving) el.classList.add('resolving');
-  render_card_into_element(card, el, false, display_cost);
-  el.addEventListener('mouseenter', () => render_card_preview(card));
-  el.addEventListener('mouseleave', () => clear_card_preview());
-  return el;
+  const card_el    = document.createElement('div');
+  card_el.className = `card ${type_class} ${role_class}`.trim();
+  if (is_selected)  card_el.classList.add('selected-from-hand');
+  if (is_resolving) card_el.classList.add('resolving');
+  render_card_into_element(card, card_el, false, display_cost);
+  card_el.addEventListener('mouseenter', () => render_card_preview(card));
+  card_el.addEventListener('mouseleave', () => clear_card_preview());
+  return card_el;
 }
 
 const LEVEL_COLOURS = {
@@ -392,36 +407,35 @@ const LEVEL_COLOURS = {
 };
 const LEVEL_COLOUR_DEFAULT = { fill: '#374151', stroke: '#6b7280', text: '#d1d5db' };
 
-function make_badge(value, colours, css_class) {
-  const ns  = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '0 0 28 28');
-  svg.setAttribute('width',   '26');
-  svg.setAttribute('height',  '26');
-  svg.classList.add(css_class);
+function make_badge(badge_value, colours, css_class) {
+  const svg_el = document.createElementNS(SVG_NAMESPACE, 'svg');
+  svg_el.setAttribute('viewBox', '0 0 28 28');
+  svg_el.setAttribute('width',   '26');
+  svg_el.setAttribute('height',  '26');
+  svg_el.classList.add(css_class);
 
-  const ring = document.createElementNS(ns, 'circle');
-  ring.setAttribute('cx', '14'); ring.setAttribute('cy', '14'); ring.setAttribute('r', '13');
-  ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', '#ffffff');
-  ring.setAttribute('stroke-width', '2'); ring.setAttribute('opacity', '0.25');
+  const ring_circle = document.createElementNS(SVG_NAMESPACE, 'circle');
+  ring_circle.setAttribute('cx', '14'); ring_circle.setAttribute('cy', '14'); ring_circle.setAttribute('r', '13');
+  ring_circle.setAttribute('fill', 'none'); ring_circle.setAttribute('stroke', '#ffffff');
+  ring_circle.setAttribute('stroke-width', '2'); ring_circle.setAttribute('opacity', '0.25');
 
-  const circle = document.createElementNS(ns, 'circle');
-  circle.setAttribute('cx', '14'); circle.setAttribute('cy', '14'); circle.setAttribute('r', '12');
-  circle.setAttribute('fill', colours.fill); circle.setAttribute('stroke', colours.stroke);
-  circle.setAttribute('stroke-width', '1.5');
+  const fill_circle = document.createElementNS(SVG_NAMESPACE, 'circle');
+  fill_circle.setAttribute('cx', '14'); fill_circle.setAttribute('cy', '14'); fill_circle.setAttribute('r', '12');
+  fill_circle.setAttribute('fill', colours.fill); fill_circle.setAttribute('stroke', colours.stroke);
+  fill_circle.setAttribute('stroke-width', '1.5');
 
-  const text_el = document.createElementNS(ns, 'text');
-  text_el.setAttribute('x', '14'); text_el.setAttribute('y', '19');
-  text_el.setAttribute('text-anchor', 'middle');
-  text_el.setAttribute('font-size',   value > 9 ? '11' : '13');
-  text_el.setAttribute('font-weight', 'bold');
-  text_el.setAttribute('font-family', 'sans-serif');
-  text_el.setAttribute('fill',        colours.text);
-  text_el.setAttribute('pointer-events', 'none');
-  text_el.textContent = value ?? '?';
+  const value_text_el = document.createElementNS(SVG_NAMESPACE, 'text');
+  value_text_el.setAttribute('x', '14'); value_text_el.setAttribute('y', '19');
+  value_text_el.setAttribute('text-anchor', 'middle');
+  value_text_el.setAttribute('font-size',   badge_value > BADGE_TWO_DIGIT_FONT_THRESHOLD ? '11' : '13');
+  value_text_el.setAttribute('font-weight', 'bold');
+  value_text_el.setAttribute('font-family', 'sans-serif');
+  value_text_el.setAttribute('fill',        colours.text);
+  value_text_el.setAttribute('pointer-events', 'none');
+  value_text_el.textContent = badge_value ?? '?';
 
-  svg.appendChild(ring); svg.appendChild(circle); svg.appendChild(text_el);
-  return svg;
+  svg_el.appendChild(ring_circle); svg_el.appendChild(fill_circle); svg_el.appendChild(value_text_el);
+  return svg_el;
 }
 
 function make_level_badge(level) {
@@ -444,71 +458,71 @@ const PIP_CONFIG = {
 };
 
 function make_resolution_pips(pips) {
-  const overlay = document.createElement('div');
-  overlay.className = 'pip-overlay';
+  const pip_overlay = document.createElement('div');
+  pip_overlay.className = 'pip-overlay';
   for (const pip of pips) {
-    const cfg = PIP_CONFIG[pip.type];
-    if (!cfg) continue;
-    const el = document.createElement('div');
-    el.className = `pip pip-${pip.type}`;
-    el.style.setProperty('--pip-colour', cfg.colour);
-    const icon  = document.createElement('span'); icon.className  = 'pip-icon';  icon.textContent  = cfg.icon;
-    const val   = document.createElement('span'); val.className   = 'pip-value'; val.textContent   = Math.abs(pip.value);
-    const label = document.createElement('span'); label.className = 'pip-label'; label.textContent = cfg.label;
-    el.appendChild(icon); el.appendChild(val); el.appendChild(label);
-    overlay.appendChild(el);
+    const pip_config = PIP_CONFIG[pip.type];
+    if (!pip_config) continue;
+    const pip_el = document.createElement('div');
+    pip_el.className = `pip pip-${pip.type}`;
+    pip_el.style.setProperty('--pip-colour', pip_config.colour);
+    const icon_el  = document.createElement('span'); icon_el.className  = 'pip-icon';  icon_el.textContent  = pip_config.icon;
+    const value_el = document.createElement('span'); value_el.className = 'pip-value'; value_el.textContent = Math.abs(pip.value);
+    const label_el = document.createElement('span'); label_el.className = 'pip-label'; label_el.textContent = pip_config.label;
+    pip_el.appendChild(icon_el); pip_el.appendChild(value_el); pip_el.appendChild(label_el);
+    pip_overlay.appendChild(pip_el);
   }
-  return overlay;
+  return pip_overlay;
 }
 
 function render_card_into_element(card, card_el, large = false, display_cost = null) {
   card_el.replaceChildren();
 
-  const top_row = document.createElement('div');
-  top_row.className = 'card-top';
-  const name_span = document.createElement('span');
-  name_span.className   = 'card-name';
-  name_span.textContent = (card.name || '?').replace(
-    /\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  const top_row_el = document.createElement('div');
+  top_row_el.className = 'card-top';
+  const name_span_el = document.createElement('span');
+  name_span_el.className   = 'card-name';
+  name_span_el.textContent = (card.name || '?').replace(
+    /\w\S*/g, word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
   );
-  top_row.appendChild(name_span);
-  card_el.appendChild(top_row);
+  top_row_el.appendChild(name_span_el);
+  card_el.appendChild(top_row_el);
 
   if (display_cost !== null && display_cost > 0) {
-    const cb = make_cost_badge(display_cost);
-    cb.classList.add('cost-badge-overlay');
-    card_el.appendChild(cb);
+    const cost_badge_el = make_cost_badge(display_cost);
+    cost_badge_el.classList.add('cost-badge-overlay');
+    card_el.appendChild(cost_badge_el);
   }
 
   if (card.level !== undefined) {
-    const lb = make_level_badge(card.level);
-    lb.classList.add('level-badge-overlay');
-    card_el.appendChild(lb);
+    const level_badge_el = make_level_badge(card.level);
+    level_badge_el.classList.add('level-badge-overlay');
+    card_el.appendChild(level_badge_el);
   }
 
-  const canvas = document.createElement('canvas');
-  canvas.className = 'card-art';
-  canvas.width     = large ? 180 : 120;
-  canvas.height    = large ? 140 : 100;
-  canvas.style.imageRendering = 'pixelated';
-  card_el.appendChild(canvas);
-  if (typeof card.art === 'function') card.art(canvas);
+  const art_canvas = document.createElement('canvas');
+  art_canvas.className = 'card-art';
+  art_canvas.width     = large ? CARD_CANVAS_LARGE_WIDTH  : CARD_CANVAS_NORMAL_WIDTH;
+  art_canvas.height    = large ? CARD_CANVAS_LARGE_HEIGHT : CARD_CANVAS_NORMAL_HEIGHT;
+  art_canvas.style.imageRendering = 'pixelated';
+  card_el.appendChild(art_canvas);
+  if (typeof card.art === 'function') card.art(art_canvas);
 
   if (card.resolution_pips.length > 0) {
     card_el.appendChild(make_resolution_pips(card.resolution_pips));
   }
 
   if (card.keywords?.length) {
-    const kw_row = document.createElement('div');
-    kw_row.className = 'card-keywords';
-    for (const kw of card.keywords) {
-      const chip = document.createElement('span');
-      chip.className   = `kw-chip kw-${kw}`;
-      chip.textContent = KEYWORD_LABELS[kw] ?? kw;
-      chip.title       = KEYWORD_DESCRIPTIONS[kw] ?? kw;
-      kw_row.appendChild(chip);
+    const keyword_row_el = document.createElement('div');
+    keyword_row_el.className = 'card-keywords';
+    for (const keyword of card.keywords) {
+      const keyword_chip = document.createElement('span');
+      keyword_chip.className   = `kw-chip kw-${keyword}`;
+      keyword_chip.textContent = KEYWORD_LABELS[keyword] ?? keyword;
+      keyword_chip.title       = KEYWORD_DESCRIPTIONS[keyword] ?? keyword;
+      keyword_row_el.appendChild(keyword_chip);
     }
-    card_el.appendChild(kw_row);
+    card_el.appendChild(keyword_row_el);
   }
 
   const desc_el = document.createElement('div');
@@ -533,128 +547,143 @@ const KEYWORD_DESCRIPTIONS = {
 };
 
 function make_empty_slot(label_text) {
-  const el = document.createElement('div');
-  el.className = 'card empty-slot';
-  const label = document.createElement('span');
-  label.className   = 'slot-label';
-  label.textContent = label_text;
-  el.appendChild(label);
-  return el;
+  const slot_el = document.createElement('div');
+  slot_el.className = 'card empty-slot';
+  const label_el = document.createElement('span');
+  label_el.className   = 'slot-label';
+  label_el.textContent = label_text;
+  slot_el.appendChild(label_el);
+  return slot_el;
 }
 
-function make_locked_slot(cost, can_afford) {
-  const el  = document.createElement('div');
-  el.className = `card locked-slot${can_afford ? ' can-afford' : ''}`;
-  const canvas = document.createElement('canvas');
-  canvas.width = 128; canvas.height = 148; canvas.className = 'locked-slot-canvas';
-  paint_locked_stall(canvas, can_afford);
-  el.appendChild(canvas);
-  const label = document.createElement('div');
-  label.className   = 'locked-slot-label';
-  label.textContent = cost !== null ? `${cost} ◆ Unlock` : '—';
-  el.appendChild(label);
-  return el;
+function make_locked_slot(unlock_cost, can_afford) {
+  const slot_el = document.createElement('div');
+  slot_el.className = `card locked-slot${can_afford ? ' can-afford' : ''}`;
+  const stall_canvas = document.createElement('canvas');
+  stall_canvas.width  = LOCKED_SLOT_CANVAS_WIDTH;
+  stall_canvas.height = LOCKED_SLOT_CANVAS_HEIGHT;
+  stall_canvas.className = 'locked-slot-canvas';
+  paint_locked_stall(stall_canvas, can_afford);
+  slot_el.appendChild(stall_canvas);
+  const cost_label_el = document.createElement('div');
+  cost_label_el.className   = 'locked-slot-label';
+  cost_label_el.textContent = unlock_cost !== null ? `${unlock_cost} ◆ Unlock` : '—';
+  slot_el.appendChild(cost_label_el);
+  return slot_el;
 }
 
 function paint_locked_stall(canvas, can_afford) {
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
+  const canvas_ctx    = canvas.getContext('2d');
+  const canvas_width  = canvas.width;
+  const canvas_height = canvas.height;
+  canvas_ctx.clearRect(0, 0, canvas_width, canvas_height);
 
-  ctx.fillStyle = can_afford ? '#121008' : '#0e0e0e';
-  ctx.fillRect(0, 0, w, h);
+  canvas_ctx.fillStyle = can_afford ? '#121008' : '#0e0e0e';
+  canvas_ctx.fillRect(0, 0, canvas_width, canvas_height);
 
-  const cx     = w / 2;
-  const wood   = can_afford ? '#7a5a2a' : '#4a3a1a';
-  const dwoof  = can_afford ? '#5a3a0a' : '#2a1a00';
-  const thatch = can_afford ? '#8a6a2a' : '#4a3a0a';
-  const rope   = can_afford ? '#9a8a4a' : '#5a4a1a';
+  const center_x  = canvas_width / 2;
+  const wood      = can_afford ? '#7a5a2a' : '#4a3a1a';
+  const dark_wood = can_afford ? '#5a3a0a' : '#2a1a00';
+  const thatch    = can_afford ? '#8a6a2a' : '#4a3a0a';
+  const rope      = can_afford ? '#9a8a4a' : '#5a4a1a';
 
-  ctx.fillStyle = can_afford ? '#3a2a0a' : '#1a1400';
-  ctx.fillRect(8, h * 0.72, w - 16, 3);
+  canvas_ctx.fillStyle = can_afford ? '#3a2a0a' : '#1a1400';
+  canvas_ctx.fillRect(8, canvas_height * 0.72, canvas_width - 16, 3);
 
-  ctx.save(); ctx.translate(cx - 32, h * 0.68); ctx.rotate(-0.06);
-  ctx.fillStyle = dwoof; ctx.fillRect(-4, -h * 0.35, 8, h * 0.35); ctx.restore();
-  ctx.save(); ctx.translate(cx + 32, h * 0.68); ctx.rotate(0.08);
-  ctx.fillStyle = dwoof; ctx.fillRect(-4, -h * 0.32, 8, h * 0.32); ctx.restore();
+  canvas_ctx.save(); canvas_ctx.translate(center_x - 32, canvas_height * 0.68); canvas_ctx.rotate(-0.06);
+  canvas_ctx.fillStyle = dark_wood; canvas_ctx.fillRect(-4, -canvas_height * 0.35, 8, canvas_height * 0.35); canvas_ctx.restore();
+  canvas_ctx.save(); canvas_ctx.translate(center_x + 32, canvas_height * 0.68); canvas_ctx.rotate(0.08);
+  canvas_ctx.fillStyle = dark_wood; canvas_ctx.fillRect(-4, -canvas_height * 0.32, 8, canvas_height * 0.32); canvas_ctx.restore();
 
-  ctx.fillStyle = thatch;
-  ctx.beginPath();
-  ctx.moveTo(cx - 46, h * 0.28); ctx.lineTo(cx + 48, h * 0.24);
-  ctx.quadraticCurveTo(cx + 10, h * 0.46, cx - 44, h * 0.44);
-  ctx.closePath(); ctx.fill();
+  canvas_ctx.fillStyle = thatch;
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(center_x - 46, canvas_height * 0.28); canvas_ctx.lineTo(center_x + 48, canvas_height * 0.24);
+  canvas_ctx.quadraticCurveTo(center_x + 10, canvas_height * 0.46, center_x - 44, canvas_height * 0.44);
+  canvas_ctx.closePath(); canvas_ctx.fill();
 
-  ctx.strokeStyle = dwoof; ctx.lineWidth = 2; ctx.globalAlpha = 0.4;
-  for (let x = cx - 38; x < cx + 42; x += 10) {
-    ctx.beginPath(); ctx.moveTo(x, h * 0.28); ctx.lineTo(x - 4, h * 0.43); ctx.stroke();
+  canvas_ctx.strokeStyle = dark_wood; canvas_ctx.lineWidth = 2; canvas_ctx.globalAlpha = 0.4;
+  for (let thatch_x = center_x - 38; thatch_x < center_x + 42; thatch_x += 10) {
+    canvas_ctx.beginPath(); canvas_ctx.moveTo(thatch_x, canvas_height * 0.28); canvas_ctx.lineTo(thatch_x - 4, canvas_height * 0.43); canvas_ctx.stroke();
   }
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = thatch; ctx.lineWidth = 2;
-  for (let x = cx - 40; x < cx + 44; x += 7) {
-    const len = 6 + (x * 3 % 8);
-    ctx.beginPath(); ctx.moveTo(x, h * 0.43); ctx.lineTo(x + 1, h * 0.43 + len); ctx.stroke();
-  }
-
-  ctx.fillStyle = wood;
-  ctx.save(); ctx.translate(cx, h * 0.58); ctx.rotate(0.03);
-  ctx.fillRect(-38, -5, 76, 10); ctx.restore();
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(cx - 36, h * 0.59, 74, 4);
-
-  ctx.fillStyle = dwoof;
-  ctx.fillRect(cx - 22, h * 0.50, 16, 10); ctx.fillRect(cx - 20, h * 0.47, 12, 6);
-  ctx.strokeStyle = wood; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(cx - 22, h * 0.50); ctx.lineTo(cx - 6, h * 0.60); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 6,  h * 0.50); ctx.lineTo(cx - 22, h * 0.60); ctx.stroke();
-
-  ctx.strokeStyle = rope; ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(cx + 30, h * 0.38);
-  ctx.quadraticCurveTo(cx + 38, h * 0.52, cx + 28, h * 0.62); ctx.stroke();
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath(); ctx.moveTo(cx + 28, h * 0.62);
-    ctx.lineTo(cx + 24 + i * 4, h * 0.68); ctx.stroke();
+  canvas_ctx.globalAlpha = 1;
+  canvas_ctx.strokeStyle = thatch; canvas_ctx.lineWidth = 2;
+  for (let thatch_x = center_x - 40; thatch_x < center_x + 44; thatch_x += 7) {
+    const whisker_length = 6 + (thatch_x * 3 % 8);
+    canvas_ctx.beginPath();
+    canvas_ctx.moveTo(thatch_x, canvas_height * 0.43);
+    canvas_ctx.lineTo(thatch_x + 1, canvas_height * 0.43 + whisker_length);
+    canvas_ctx.stroke();
   }
 
-  const lx = cx, ly = h * 0.83;
-  ctx.strokeStyle = can_afford ? '#b89840' : '#3a3a3a'; ctx.lineWidth = 2;
-  ctx.fillStyle   = can_afford ? '#1a1200' : '#0a0a0a';
-  ctx.beginPath(); ctx.arc(lx, ly - 7, 6, Math.PI, 0); ctx.stroke();
-  ctx.fillRect(lx - 8, ly - 4, 16, 12); ctx.strokeRect(lx - 8, ly - 4, 16, 12);
-  ctx.fillStyle = can_afford ? '#b89840' : '#3a3a3a';
-  ctx.beginPath(); ctx.arc(lx, ly + 2, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillRect(lx - 1.5, ly + 2, 3, 4);
+  canvas_ctx.fillStyle = wood;
+  canvas_ctx.save(); canvas_ctx.translate(center_x, canvas_height * 0.58); canvas_ctx.rotate(0.03);
+  canvas_ctx.fillRect(-38, -5, 76, 10); canvas_ctx.restore();
+  canvas_ctx.fillStyle = 'rgba(0,0,0,0.5)'; canvas_ctx.fillRect(center_x - 36, canvas_height * 0.59, 74, 4);
+
+  canvas_ctx.fillStyle = dark_wood;
+  canvas_ctx.fillRect(center_x - 22, canvas_height * 0.50, 16, 10); canvas_ctx.fillRect(center_x - 20, canvas_height * 0.47, 12, 6);
+  canvas_ctx.strokeStyle = wood; canvas_ctx.lineWidth = 1;
+  canvas_ctx.beginPath(); canvas_ctx.moveTo(center_x - 22, canvas_height * 0.50); canvas_ctx.lineTo(center_x - 6,  canvas_height * 0.60); canvas_ctx.stroke();
+  canvas_ctx.beginPath(); canvas_ctx.moveTo(center_x - 6,  canvas_height * 0.50); canvas_ctx.lineTo(center_x - 22, canvas_height * 0.60); canvas_ctx.stroke();
+
+  canvas_ctx.strokeStyle = rope; canvas_ctx.lineWidth = 1.5;
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(center_x + 30, canvas_height * 0.38);
+  canvas_ctx.quadraticCurveTo(center_x + 38, canvas_height * 0.52, center_x + 28, canvas_height * 0.62); canvas_ctx.stroke();
+  const FRINGE_STRAND_COUNT = 3;
+  for (let strand_index = 0; strand_index < FRINGE_STRAND_COUNT; strand_index++) {
+    canvas_ctx.beginPath();
+    canvas_ctx.moveTo(center_x + 28, canvas_height * 0.62);
+    canvas_ctx.lineTo(center_x + 24 + strand_index * 4, canvas_height * 0.68);
+    canvas_ctx.stroke();
+  }
+
+  const lock_center_x = center_x;
+  const lock_center_y = canvas_height * 0.83;
+  canvas_ctx.strokeStyle = can_afford ? '#b89840' : '#3a3a3a';
+  canvas_ctx.lineWidth   = 2;
+  canvas_ctx.fillStyle   = can_afford ? '#1a1200' : '#0a0a0a';
+  canvas_ctx.beginPath(); canvas_ctx.arc(lock_center_x, lock_center_y - 7, 6, Math.PI, 0); canvas_ctx.stroke();
+  canvas_ctx.fillRect(lock_center_x - 8, lock_center_y - 4, 16, 12); canvas_ctx.strokeRect(lock_center_x - 8, lock_center_y - 4, 16, 12);
+  canvas_ctx.fillStyle = can_afford ? '#b89840' : '#3a3a3a';
+  canvas_ctx.beginPath(); canvas_ctx.arc(lock_center_x, lock_center_y + 2, 2.5, 0, Math.PI * 2); canvas_ctx.fill();
+  canvas_ctx.fillRect(lock_center_x - 1.5, lock_center_y + 2, 3, 4);
 }
 
 function make_spacer(css_class) {
-  const el = document.createElement('div');
-  el.className = css_class;
-  return el;
+  const spacer_el = document.createElement('div');
+  spacer_el.className = css_class;
+  return spacer_el;
 }
 
 export function show_screen(screen_id) {
-  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(screen_el => screen_el.classList.remove('active'));
   document.getElementById(screen_id).classList.add('active');
 }
 
 export function show_prefight_screen(state) {
-  const bb   = state.fight.big_bad;
-  const city = state.fight.city;
+  const big_bad = state.fight.big_bad;
+  const city    = state.fight.city;
 
   document.getElementById('prefight-fight-label').textContent =
     `— FIGHT ${state.run.fight_number} OF ${FIGHTS_PER_RUN} —`;
-  document.getElementById('prefight-bb-name').textContent  = bb.name;
-  document.getElementById('prefight-bb-title').textContent = bb.title;
-  document.getElementById('prefight-bb-deck').textContent  = bb.deck_desc;
-  const stats_parts = [`HP: ${bb.max_hp}`, `ATK: ${bb.atk}`, `Monsters: ${bb.monsters_per_turn}/turn`];
-  if (bb.weak_against)   stats_parts.push(`weak to ${bb.weak_against.toUpperCase()} (+50%)`);
-  if (bb.strong_against) stats_parts.push(`resists ${bb.strong_against.toUpperCase()} (-50%)`);
+  document.getElementById('prefight-bb-name').textContent  = big_bad.name;
+  document.getElementById('prefight-bb-title').textContent = big_bad.title;
+  document.getElementById('prefight-bb-deck').textContent  = big_bad.deck_desc;
+  const stats_parts = [
+    `HP: ${big_bad.max_hp}`,
+    `ATK: ${big_bad.atk}`,
+    `Monsters: ${big_bad.monsters_per_turn}/turn`,
+  ];
+  if (big_bad.weak_against)   stats_parts.push(`weak to ${big_bad.weak_against.toUpperCase()} (+${WEAK_BONUS_DISPLAY_PERCENT}%)`);
+  if (big_bad.strong_against) stats_parts.push(`resists ${big_bad.strong_against.toUpperCase()} (-${RESIST_PENALTY_DISPLAY_PERCENT}%)`);
   document.getElementById('prefight-bb-stats').textContent = stats_parts.join(' | ');
   document.getElementById('prefight-city-name').textContent   = city.name;
   document.getElementById('prefight-city-type').textContent   = city.type;
-  document.getElementById('prefight-city-effect').textContent = city.effects.map(e => e.desc).join(' ');
+  document.getElementById('prefight-city-effect').textContent = city.effects.map(city_effect => city_effect.desc).join(' ');
   document.getElementById('prefight-city-stats').textContent  = `Morale: ${city.max_morale}`;
 
-  paint_sprite(document.getElementById('prefight-bb-sprite'),   big_bad_art[bb.id]);
+  paint_sprite(document.getElementById('prefight-bb-sprite'),   big_bad_art[big_bad.id]);
   paint_sprite(document.getElementById('prefight-city-sprite'), city_art[city.id]);
 
   show_screen('screen-prefight');
@@ -668,111 +697,114 @@ export function show_event_screen(state, event_def) {
   }
   document.getElementById('event-title').textContent = event_def.title;
   document.getElementById('event-desc').textContent  = event_def.desc;
-  const container = document.getElementById('event-choices');
-  container.replaceChildren();
-  event_def.choices.forEach((choice, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'event-choice-btn';
-    const label = document.createElement('div');
-    label.className   = 'event-choice-label';
-    label.textContent = choice.label;
-    const desc = document.createElement('div');
-    desc.className   = 'event-choice-desc';
-    desc.textContent = choice.desc;
-    btn.appendChild(label);
-    btn.appendChild(desc);
-    btn.addEventListener('click', () => _apply_event_choice(state, event_def, i));
-    container.appendChild(btn);
+  const choices_container = document.getElementById('event-choices');
+  choices_container.replaceChildren();
+  event_def.choices.forEach((choice, choice_index) => {
+    const choice_btn = document.createElement('button');
+    choice_btn.className = 'event-choice-btn';
+    const choice_label_el = document.createElement('div');
+    choice_label_el.className   = 'event-choice-label';
+    choice_label_el.textContent = choice.label;
+    const choice_desc_el = document.createElement('div');
+    choice_desc_el.className   = 'event-choice-desc';
+    choice_desc_el.textContent = choice.desc;
+    choice_btn.appendChild(choice_label_el);
+    choice_btn.appendChild(choice_desc_el);
+    choice_btn.addEventListener('click', () => _apply_event_choice(state, event_def, choice_index));
+    choices_container.appendChild(choice_btn);
   });
   show_screen('screen-event');
 }
 
 export function show_upgrade_screen(state) {
 
-  const owned_ids     = new Set((state.run.treasures ?? []).map(t => t.id));
-  const treasure_pool = (Registry.treasures ?? []).filter(t => !owned_ids.has(t.id));
+  const owned_treasure_ids = new Set((state.run.treasures ?? []).map(owned_treasure => owned_treasure.id));
+  const unowned_treasures  = (Registry.treasures ?? []).filter(treasure => !owned_treasure_ids.has(treasure.id));
 
-  const upgrades_shuffled = _shuffle_array([...Registry.cards_upgrades]);
-  const choices = [
-    { kind: 'promoted', def: upgrades_shuffled[0] },
-    { kind: 'promoted', def: upgrades_shuffled[1] },
-    treasure_pool.length > 0
-      ? { kind: 'treasure', def: _shuffle_array([...treasure_pool])[0] }
-      : { kind: 'promoted', def: upgrades_shuffled[2] },
-  ].filter(c => c.def);
+  const shuffled_upgrades = _shuffle_array([...Registry.cards_upgrades]);
+  const choice_candidates = [
+    { kind: 'promoted', def: shuffled_upgrades[0] },
+    { kind: 'promoted', def: shuffled_upgrades[1] },
+    unowned_treasures.length > 0
+      ? { kind: 'treasure', def: _shuffle_array([...unowned_treasures])[0] }
+      : { kind: 'promoted', def: shuffled_upgrades[2] },
+  ].filter(candidate => candidate.def);
 
-  const display_choices = _shuffle_array(choices);
+  const display_choices = _shuffle_array(choice_candidates);
 
   document.getElementById('upgrade-victory-msg').textContent = state.fight.big_bad.victory_message;
 
-  const container = document.getElementById('upgrade-choices');
-  container.replaceChildren();
+  const choices_container = document.getElementById('upgrade-choices');
+  choices_container.replaceChildren();
 
   for (const choice of display_choices) {
     if (choice.kind === 'promoted') {
-      container.appendChild(make_promoted_choice(state, choice.def));
+      choices_container.appendChild(make_promoted_choice(state, choice.def));
     } else {
-      container.appendChild(make_treasure_choice(state, choice.def));
+      choices_container.appendChild(make_treasure_choice(state, choice.def));
     }
   }
   show_screen('screen-upgrade');
 }
 
 function make_promoted_choice(state, card_def) {
-  const instance = _create_card_instance(card_def);
+  const card_instance = _create_card_instance(card_def);
 
-  const wrap = document.createElement('div');
-  wrap.className = 'upgrade-choice';
+  const choice_wrapper = document.createElement('div');
+  choice_wrapper.className = 'upgrade-choice';
 
-  const label = document.createElement('div');
-  label.className = 'upgrade-label'; label.textContent = 'PROMOTED HERO';
+  const label_el = document.createElement('div');
+  label_el.className   = 'upgrade-label';
+  label_el.textContent = 'PROMOTED HERO';
 
-  const card_display = document.createElement('div');
-  card_display.className = 'upgrade-card';
-  card_display.id        = `upgcard-${instance.uid}`;
+  const card_display_el = document.createElement('div');
+  card_display_el.className = 'upgrade-card';
+  card_display_el.id        = `upgcard-${card_instance.uid}`;
 
-  const sublabel = document.createElement('div');
-  sublabel.className = 'upgrade-sublabel'; sublabel.textContent = instance.desc;
+  const sublabel_el = document.createElement('div');
+  sublabel_el.className   = 'upgrade-sublabel';
+  sublabel_el.textContent = card_instance.desc;
 
-  wrap.appendChild(label);
-  wrap.appendChild(card_display);
-  wrap.appendChild(sublabel);
-  wrap.addEventListener('click', () => _apply_upgrade(state, card_def));
+  choice_wrapper.appendChild(label_el);
+  choice_wrapper.appendChild(card_display_el);
+  choice_wrapper.appendChild(sublabel_el);
+  choice_wrapper.addEventListener('click', () => _apply_upgrade(state, card_def));
 
-  render_card_into_element(instance, card_display, false);
-  wrap.addEventListener('mouseenter', () => render_card_preview(instance));
-  wrap.addEventListener('mouseleave', () => clear_card_preview());
-  return wrap;
+  render_card_into_element(card_instance, card_display_el, false);
+  choice_wrapper.addEventListener('mouseenter', () => render_card_preview(card_instance));
+  choice_wrapper.addEventListener('mouseleave', () => clear_card_preview());
+  return choice_wrapper;
 }
 
 function make_treasure_choice(state, treasure_def) {
-  const wrap = document.createElement('div');
-  wrap.className = 'upgrade-choice upgrade-choice-treasure';
+  const choice_wrapper = document.createElement('div');
+  choice_wrapper.className = 'upgrade-choice upgrade-choice-treasure';
 
-  const label = document.createElement('div');
-  label.className = 'upgrade-label upgrade-label-treasure';
-  label.textContent = 'TREASURE';
+  const label_el = document.createElement('div');
+  label_el.className   = 'upgrade-label upgrade-label-treasure';
+  label_el.textContent = 'TREASURE';
 
-  const card_display = document.createElement('div');
-  card_display.className = 'upgrade-card upgrade-card-treasure';
+  const card_display_el = document.createElement('div');
+  card_display_el.className = 'upgrade-card upgrade-card-treasure';
 
-  const icon = document.createElement('div');
-  icon.className   = 'treasure-icon';
-  icon.textContent = '✦';
-  const name = document.createElement('div');
-  name.className   = 'treasure-name';
-  name.textContent = treasure_def.name;
-  card_display.appendChild(icon);
-  card_display.appendChild(name);
+  const icon_el = document.createElement('div');
+  icon_el.className   = 'treasure-icon';
+  icon_el.textContent = '✦';
+  const name_el = document.createElement('div');
+  name_el.className   = 'treasure-name';
+  name_el.textContent = treasure_def.name;
+  card_display_el.appendChild(icon_el);
+  card_display_el.appendChild(name_el);
 
-  const sublabel = document.createElement('div');
-  sublabel.className = 'upgrade-sublabel'; sublabel.textContent = treasure_def.desc;
+  const sublabel_el = document.createElement('div');
+  sublabel_el.className   = 'upgrade-sublabel';
+  sublabel_el.textContent = treasure_def.desc;
 
-  wrap.appendChild(label);
-  wrap.appendChild(card_display);
-  wrap.appendChild(sublabel);
-  wrap.addEventListener('click', () => _apply_treasure(state, treasure_def));
-  return wrap;
+  choice_wrapper.appendChild(label_el);
+  choice_wrapper.appendChild(card_display_el);
+  choice_wrapper.appendChild(sublabel_el);
+  choice_wrapper.addEventListener('click', () => _apply_treasure(state, treasure_def));
+  return choice_wrapper;
 }
 
 export function show_summary_screen(state, is_victory) {
@@ -787,60 +819,60 @@ export function show_summary_screen(state, is_victory) {
     : 'The city has fallen. The darkness spreads. Another run awaits.';
 
   fights_el.replaceChildren();
-  for (const record of state.run.big_bads) {
-    const fight_div  = document.createElement('div');  fight_div.className  = 'summary-fight';
-    const name_div   = document.createElement('div');  name_div.className   = 'summary-fight-name';   name_div.textContent   = record.name;
-    const result_div = document.createElement('div');  result_div.className = `summary-fight-result ${record.result}`;
-    result_div.textContent = record.result === 'won' ? '★ DEFEATED' : '✕ FELL';
-    fight_div.appendChild(name_div); fight_div.appendChild(result_div);
-    fights_el.appendChild(fight_div);
+  for (const fight_record of state.run.big_bads) {
+    const fight_row_el = document.createElement('div'); fight_row_el.className = 'summary-fight';
+    const name_el      = document.createElement('div'); name_el.className      = 'summary-fight-name';   name_el.textContent      = fight_record.name;
+    const result_el    = document.createElement('div'); result_el.className    = `summary-fight-result ${fight_record.result}`;
+    result_el.textContent = fight_record.result === 'won' ? '★ DEFEATED' : '✕ FELL';
+    fight_row_el.appendChild(name_el); fight_row_el.appendChild(result_el);
+    fights_el.appendChild(fight_row_el);
   }
   show_screen('screen-summary');
 }
 
 export function log_entry(text, css_class = '') {
-  const container = document.getElementById('log-entries');
-  if (!container) return;
-  const el = document.createElement('div');
-  el.className   = `log-entry ${css_class}`;
-  el.textContent = text;
-  container.appendChild(el);
-  while (container.children.length > LOG_MAX_ENTRIES) container.firstElementChild.remove();
-  container.scrollTop = container.scrollHeight;
+  const log_container = document.getElementById('log-entries');
+  if (!log_container) return;
+  const entry_el = document.createElement('div');
+  entry_el.className   = `log-entry ${css_class}`;
+  entry_el.textContent = text;
+  log_container.appendChild(entry_el);
+  while (log_container.children.length > LOG_MAX_ENTRIES) log_container.firstElementChild.remove();
+  log_container.scrollTop = log_container.scrollHeight;
 }
 
 export function log_phase(text) { log_entry(text, 'log-phase'); }
 
 export function flash_notification(text) {
-  const el = document.getElementById('notification');
-  el.textContent = text;
-  el.classList.add('visible');
+  const notification_el = document.getElementById('notification');
+  notification_el.textContent = text;
+  notification_el.classList.add('visible');
   if (App.notification_timer) clearTimeout(App.notification_timer);
-  App.notification_timer = setTimeout(() => el.classList.remove('visible'), 1200);
+  App.notification_timer = setTimeout(() => notification_el.classList.remove('visible'), NOTIFICATION_DURATION_MS);
 }
 
-export function setupEventListeners(fns) {
+export function setupEventListeners(engine_fns) {
 
-  _start_new_run          = fns.start_new_run;
-  _begin_fight            = fns.begin_fight;
-  _on_phase_btn           = fns.on_phase_btn;
-  _quick_play_all         = fns.quick_play_all;
-  _on_hand_card_click     = fns.on_hand_card_click;
-  _on_hero_slot_click     = fns.on_hero_slot_click;
-  _on_market_card_click   = fns.on_market_card_click;
-  _on_unlock_market_slot  = fns.on_unlock_market_slot;
-  _on_upgrade_market_click = fns.on_upgrade_market_click;
-  _on_forge_click          = fns.on_forge_click;
-  _get_forge_cost          = fns.get_forge_cost;
-  _apply_upgrade          = fns.apply_upgrade;
-  _apply_treasure         = fns.apply_treasure;
-  _apply_event_choice     = fns.apply_event_choice;
+  _start_new_run           = engine_fns.start_new_run;
+  _begin_fight             = engine_fns.begin_fight;
+  _on_phase_btn            = engine_fns.on_phase_btn;
+  _quick_play_all          = engine_fns.quick_play_all;
+  _on_hand_card_click      = engine_fns.on_hand_card_click;
+  _on_hero_slot_click      = engine_fns.on_hero_slot_click;
+  _on_market_card_click    = engine_fns.on_market_card_click;
+  _on_unlock_market_slot   = engine_fns.on_unlock_market_slot;
+  _on_upgrade_market_click = engine_fns.on_upgrade_market_click;
+  _on_forge_click          = engine_fns.on_forge_click;
+  _get_forge_cost          = engine_fns.get_forge_cost;
+  _apply_upgrade           = engine_fns.apply_upgrade;
+  _apply_treasure          = engine_fns.apply_treasure;
+  _apply_event_choice      = engine_fns.apply_event_choice;
 
-  _get_effective_market_size = fns.get_effective_market_size;
-  _get_slot_unlock_cost      = fns.get_slot_unlock_cost;
-  _get_card_cost             = fns.get_card_cost;
-  _create_card_instance      = fns.create_card_instance;
-  _shuffle_array             = fns.shuffle_array;
+  _get_effective_market_size = engine_fns.get_effective_market_size;
+  _get_slot_unlock_cost      = engine_fns.get_slot_unlock_cost;
+  _get_card_cost             = engine_fns.get_card_cost;
+  _create_card_instance      = engine_fns.create_card_instance;
+  _shuffle_array             = engine_fns.shuffle_array;
 
   document.getElementById('begin-run-btn')?.addEventListener('click', () => _start_new_run());
   document.getElementById('prefight-btn')?.addEventListener('click', () => _begin_fight());
