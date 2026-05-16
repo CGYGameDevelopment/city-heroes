@@ -3,13 +3,26 @@
 // Each tier's cards form a shared pool used by all Big Bads of that tier.
 // Cards are type 'monster', cost 0, and are never part of the player's deck.
 // Do not add engine logic to this file.
+//
+// Phase 4 — Tribe field. Each monster carries a `tribe` tag. A Big Bad with
+// `monster_tribes: ['undead', 'beast']` will only summon monsters whose tribe
+// is in that list. If a Big Bad omits monster_tribes, the full tier pool is
+// used (legacy behaviour).
+//
+// Tribes:
+//   beast      — wild creatures, brute physical pressure
+//   goblinoid  — light raiders, swarm pressure
+//   construct  — armoured, shielded, slow
+//   undead     — disruption, kill effects, gold drain
+//   serpent    — venomous, gold drain, sustained pressure
+//   void       — late-game terror, deck destruction
 
 // ---------------------------------------------------------------------------
 // Tier 1
 // Simple and readable — pure damage, minor drain.
 // ---------------------------------------------------------------------------
 
-const cards_monster_tier_1 = [
+var cards_monster_tier_1 = [
 
   {
     id:       'gnoll_raider',
@@ -17,6 +30,7 @@ const cards_monster_tier_1 = [
     level:    1,
     name:     'GNOLL RAIDER',
     type:     'monster',
+    tribe:    'goblinoid',
     cost:     0,
     atk:      3,
     atk_type: 'physical',
@@ -34,6 +48,7 @@ const cards_monster_tier_1 = [
     level:    2,
     name:     'CAVE BAT',
     type:     'monster',
+    tribe:    'beast',
     cost:     0,
     atk:      2,
     atk_type: 'physical',
@@ -46,45 +61,30 @@ const cards_monster_tier_1 = [
   },
 
   {
-    id:       'goblin_archer',
+    id:       'goblin_skirmisher',
     role:     'physical',
     level:    1,
-    name:     'GOBLIN ARCHER',
+    name:     'GOBLIN SKIRMISHER',
     type:     'monster',
+    tribe:    'goblinoid',
     cost:     0,
     atk:      2,
     atk_type: 'physical',
     gold:     0,
-    morale:   -2,
-    shield:   0,
-    effects:  [],
-    desc:     'Deal 2 Physical damage. Drain 2 City Morale.',
-    art:      make_art_painter('physical'),
-  },
-
-  {
-    id:       'dire_wolf',
-    role:     'physical',
-    level:    1,
-    name:     'DIRE WOLF',
-    type:     'monster',
-    cost:     0,
-    atk:      5,
-    atk_type: 'physical',
-    gold:     0,
     morale:   0,
-    shield:   0,
+    shield:   1,
     effects:  [],
-    desc:     'Deal 5 Physical damage.',
+    desc:     'Deal 2 Physical damage. +1 Monster Shield.',
     art:      make_art_painter('physical'),
   },
 
   {
-    id:       'orc_brute',
+    id:       'rabid_wolf',
     role:     'physical',
-    level:    1,
-    name:     'ORC BRUTE',
+    level:    2,
+    name:     'RABID WOLF',
     type:     'monster',
+    tribe:    'beast',
     cost:     0,
     atk:      4,
     atk_type: 'physical',
@@ -97,20 +97,21 @@ const cards_monster_tier_1 = [
   },
 
   {
-    id:       'road_bandit',
-    role:     'tactical',
+    id:       'shrieker',
+    role:     'magical',
     level:    1,
-    name:     'ROAD BANDIT',
+    name:     'SHRIEKER',
     type:     'monster',
+    tribe:    'beast',
     cost:     0,
     atk:      2,
-    atk_type: 'physical',
-    gold:     -2,
+    atk_type: 'magical',
+    gold:     -1,
     morale:   0,
     shield:   0,
     effects:  [],
-    desc:     'Deal 2 Physical damage. Drain 2 Gold.',
-    art:      make_art_painter('tactical'),
+    desc:     'Deal 2 Magical damage. Drain 1 Gold.',
+    art:      make_art_painter('magical'),
   },
 
 ];
@@ -120,7 +121,7 @@ const cards_monster_tier_1 = [
 // Introduces disruption — corruption, debuffs.
 // ---------------------------------------------------------------------------
 
-const cards_monster_tier_2 = [
+var cards_monster_tier_2 = [
 
   {
     id:       'cursed_herald',
@@ -128,6 +129,7 @@ const cards_monster_tier_2 = [
     level:    3,
     name:     'CURSED HERALD',
     type:     'monster',
+    tribe:    'undead',
     cost:     0,
     atk:      2,
     atk_type: 'magical',
@@ -145,6 +147,7 @@ const cards_monster_tier_2 = [
     level:    2,
     name:     'IRON SENTINEL',
     type:     'monster',
+    tribe:    'construct',
     cost:     0,
     atk:      3,
     atk_type: 'physical',
@@ -157,108 +160,74 @@ const cards_monster_tier_2 = [
   },
 
   {
-    id:       'plague_bearer',
+    id:       'venom_serpent',
     role:     'magical',
     level:    3,
-    name:     'PLAGUE BEARER',
+    name:     'VENOM SERPENT',
     type:     'monster',
+    tribe:    'serpent',
     cost:     0,
-    atk:      2,
+    atk:      3,
     atk_type: 'magical',
-    gold:     -1,
-    morale:   -3,
+    gold:     -2,
+    morale:   0,
     shield:   0,
     effects:  [],
-    desc:     'Deal 2 Magical damage. Drain 1 Gold and 3 City Morale.',
+    desc:     'Deal 3 Magical damage. Drain 2 Gold.',
     art:      make_art_painter('magical'),
   },
 
   {
-    id:       'stone_golem',
+    id:       'forge_warden',
     role:     'physical',
-    level:    2,
-    name:     'STONE GOLEM',
+    level:    3,
+    name:     'FORGE WARDEN',
     type:     'monster',
+    tribe:    'construct',
     cost:     0,
     atk:      4,
     atk_type: 'physical',
     gold:     0,
     morale:   0,
-    shield:   5,
+    shield:   2,
     effects:  [],
-    desc:     'Deal 4 Physical damage. Gain 5 Monster Shield.',
+    desc:     'Deal 4 Physical damage. +2 Monster Shield.',
     art:      make_art_painter('physical'),
   },
 
   {
-    id:       'siege_troll',
+    id:       'gnoll_chieftain',
     role:     'physical',
-    level:    2,
-    name:     'SIEGE TROLL',
+    level:    3,
+    name:     'GNOLL CHIEFTAIN',
     type:     'monster',
+    tribe:    'goblinoid',
     cost:     0,
     atk:      5,
     atk_type: 'physical',
     gold:     0,
     morale:   0,
-    shield:   2,
+    shield:   0,
     effects:  [],
-    desc:     'Deal 5 Physical damage. Gain 2 Monster Shield.',
+    desc:     'Deal 5 Physical damage.',
     art:      make_art_painter('physical'),
   },
 
   {
-    id:       'plague_rat',
-    role:     'magical',
-    level:    2,
-    name:     'PLAGUE RAT',
-    type:     'monster',
-    cost:     0,
-    atk:      1,
-    atk_type: 'physical',
-    gold:     0,
-    morale:   0,
-    shield:   0,
-    effects:  [
-      { type: 'corrupt', count: 1 },
-    ],
-    desc:     'Deal 1 Physical damage. Corrupt 1 of your cards.',
-    art:      make_art_painter('magical'),
-  },
-
-  {
-    id:       'bloodhound',
-    role:     'physical',
-    level:    2,
-    name:     'BLOODHOUND',
-    type:     'monster',
-    cost:     0,
-    atk:      2,
-    atk_type: 'physical',
-    gold:     0,
-    morale:   0,
-    shield:   0,
-    effects:  [
-      { type: 'enrage', amount: 1 },
-    ],
-    desc:     'Deal 2 Physical damage. Enrage Big Bad — ATK +1 for the rest of this fight.',
-    art:      make_art_painter('physical'),
-  },
-
-  {
-    id:       'nightmare_sprite',
+    id:       'fang_witch',
     role:     'magical',
     level:    3,
-    name:     'NIGHTMARE SPRITE',
+    name:     'FANG WITCH',
     type:     'monster',
+    tribe:    'serpent',
     cost:     0,
-    atk:      0,
-    atk_type: 'none',
-    gold:     0,
-    morale:   -5,
-    shield:   0,
+    atk:      2,
+    atk_type: 'magical',
+    gold:     -1,
+    morale:   0,
+    shield:   1,
     effects:  [],
-    desc:     'Drain 5 City Morale.',
+    desc:     'Deal 2 Magical damage. Drain 1 Gold. +1 Monster Shield.',
     art:      make_art_painter('magical'),
   },
 
@@ -269,7 +238,7 @@ const cards_monster_tier_2 = [
 // Escalates to deck destruction and healing.
 // ---------------------------------------------------------------------------
 
-const cards_monster_tier_3 = [
+var cards_monster_tier_3 = [
 
   {
     id:       'death_wraith',
@@ -277,6 +246,7 @@ const cards_monster_tier_3 = [
     level:    5,
     name:     'DEATH WRAITH',
     type:     'monster',
+    tribe:    'undead',
     cost:     0,
     atk:      0,
     atk_type: 'none',
@@ -300,6 +270,7 @@ const cards_monster_tier_3 = [
     level:    4,
     name:     'VOID LEVIATHAN',
     type:     'monster',
+    tribe:    'void',
     cost:     0,
     atk:      5,
     atk_type: 'magical',
@@ -312,114 +283,56 @@ const cards_monster_tier_3 = [
   },
 
   {
-    id:       'chaos_knight',
-    role:     'physical',
-    level:    4,
-    name:     'CHAOS KNIGHT',
-    type:     'monster',
-    cost:     0,
-    atk:      6,
-    atk_type: 'physical',
-    gold:     0,
-    morale:   -2,
-    shield:   3,
-    effects:  [],
-    desc:     'Deal 6 Physical damage. Drain 2 City Morale. Gain 3 Monster Shield.',
-    art:      make_art_painter('physical'),
-  },
-
-  {
-    id:       'banshee',
-    role:     'magical',
-    level:    5,
-    name:     'BANSHEE',
-    type:     'monster',
-    cost:     0,
-    atk:      0,
-    atk_type: 'none',
-    gold:     -2,
-    morale:   -8,
-    shield:   0,
-    effects:  [
-      {
-        type:      'kill',
-        selection: 'random',
-        fallback:  'none',
-      },
-    ],
-    desc:     'Drain 8 City Morale and 2 Gold. Slay a random Hero.',
-    art:      make_art_painter('magical'),
-  },
-
-  {
-    id:       'shadow_titan',
-    role:     'physical',
-    level:    5,
-    name:     'SHADOW TITAN',
-    type:     'monster',
-    cost:     0,
-    atk:      7,
-    atk_type: 'physical',
-    gold:     0,
-    morale:   -3,
-    shield:   0,
-    effects:  [],
-    desc:     'Deal 7 Physical damage. Drain 3 City Morale.',
-    art:      make_art_painter('physical'),
-  },
-
-  {
-    id:       'soul_leech',
+    id:       'bone_lord',
     role:     'magical',
     level:    4,
-    name:     'SOUL LEECH',
+    name:     'BONE LORD',
     type:     'monster',
+    tribe:    'undead',
     cost:     0,
-    atk:      0,
-    atk_type: 'none',
-    gold:     0,
-    morale:   -2,
-    shield:   0,
-    effects:  [
-      { type: 'corrupt', count: 2 },
-    ],
-    desc:     'Drain 2 City Morale. Corrupt 2 of your cards.',
-    art:      make_art_painter('magical'),
-  },
-
-  {
-    id:       'fury_warbeast',
-    role:     'physical',
-    level:    4,
-    name:     'FURY WARBEAST',
-    type:     'monster',
-    cost:     0,
-    atk:      3,
-    atk_type: 'physical',
+    atk:      4,
+    atk_type: 'magical',
     gold:     0,
     morale:   0,
     shield:   2,
-    effects:  [
-      { type: 'enrage', amount: 2 },
-    ],
-    desc:     'Deal 3 Physical damage. Gain 2 Monster Shield. Enrage Big Bad — ATK +2 for the rest of this fight.',
-    art:      make_art_painter('physical'),
+    effects:  [],
+    desc:     'Deal 4 Magical damage. +2 Monster Shield.',
+    art:      make_art_painter('magical'),
   },
 
   {
-    id:       'void_weaver',
+    id:       'plague_carrier',
     role:     'magical',
-    level:    5,
-    name:     'VOID WEAVER',
+    level:    4,
+    name:     'PLAGUE CARRIER',
     type:     'monster',
+    tribe:    'undead',
     cost:     0,
     atk:      3,
     atk_type: 'magical',
-    gold:     -2,
+    gold:     -1,
     morale:   0,
-    shield:   6,
+    shield:   0,
     effects:  [],
-    desc:     'Deal 3 Magical damage. Drain 2 Gold. Gain 6 Monster Shield.',
+    desc:     'Deal 3 Magical damage. Drain 1 Gold.',
+    art:      make_art_painter('magical'),
+  },
+
+  {
+    id:       'shadow_stalker',
+    role:     'magical',
+    level:    4,
+    name:     'SHADOW STALKER',
+    type:     'monster',
+    tribe:    'void',
+    cost:     0,
+    atk:      6,
+    atk_type: 'magical',
+    gold:     0,
+    morale:   0,
+    shield:   0,
+    effects:  [],
+    desc:     'Deal 6 Magical damage.',
     art:      make_art_painter('magical'),
   },
 

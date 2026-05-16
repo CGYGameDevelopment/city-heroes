@@ -2,22 +2,24 @@
 
 ## Setup
 
-City Heroes runs entirely in the browser with no installs or build steps required.
+City Heroes runs entirely in the browser with no installs or build steps required, but it does need a local HTTP server because it uses ES modules.
 
 1. Download or clone the repository so all files are in the same folder.
-2. Open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari).
-3. That's it — the game loads instantly.
+2. In a terminal in that folder, run `python -m http.server 8000`.
+3. Open `http://localhost:8000` in any modern browser.
 
-> No Node.js, no npm, no internet connection required. All files are self-contained.
+> No Node.js, no npm, no internet connection required. All files are self-contained. See `HOW_TO_RUN_LOCALLY.md` for alternatives (VS Code Live Server, etc.).
 
 ---
 
 ## Overview
 
-City Heroes is a roguelike deck-builder. You command a band of heroes across **three escalating battles** to defend your city from a series of Big Bads. Each run is randomised — a different city and different bosses every time.
+City Heroes is a roguelike deck-builder. You command a band of heroes across **five escalating battles** to defend your city from a series of Big Bads. Each run is randomised — a different city and different bosses every time.
 
-**Win condition:** Survive all three fights.
+**Win condition:** Survive all five fights.
 **Lose condition:** Your city's Morale reaches zero.
+
+The fights escalate in tier: two Tier-1 warmups, two Tier-2 mid fights, and a Tier-3 climax.
 
 ---
 
@@ -34,15 +36,15 @@ You cannot change these before the first fight.
 
 ## Cities
 
-Your city determines your starting bonuses. Five cities are available, selected randomly each run:
+Your city determines your starting bonuses AND a passive that triggers every turn or fight. Five cities are available, selected randomly each run:
 
-| City | Trait |
-|---|---|
-| Stonehaven | Standard start — balanced stats |
-| Ironhold | 50 Morale, +5 Defence at the start of each fight |
-| Duskwater | 4 market slots instead of 3 |
-| Ashenveil | All heroes cost 1 less gold to recruit |
-| Gilded Reach | +2 gold generated per turn |
+| City | Static stats | Passive |
+|---|---|---|
+| Stonehaven | 35 Morale, 3 market slots | +1 Gold at the start of every turn |
+| Ironhold | 50 Morale, +5 Defence at fight start | +1 Defence at the start of every turn |
+| Duskwater | 30 Morale, 4 market slots | Draw 1 extra card at the start of each fight |
+| Ashenveil | 25 Morale, hero cards cost 1 less gold | On every recruit, deal 1 piercing damage to the Big Bad |
+| Gilded Reach | 40 Morale, +2 Gold per turn | +1 Morale at the end of every turn |
 
 ---
 
@@ -96,31 +98,63 @@ Heroes are the cards in your deck. Each has some combination of:
 
 Between turns during a fight, you can spend gold at the Bazaar:
 
-- **Recruit a hero** — pay the card's gold cost to add it permanently to your deck.
+- **Recruit a hero** — pay the card's gold cost to add it to your deck (cards reset between fights; only Promoted heroes and Treasures persist).
 - **Unlock a new market slot** — costs 5 / 10 / 15 gold progressively.
 - **Upgrade the market tier** — costs 4 / 8 / 12 gold progressively. Higher tiers contain stronger heroes.
+- **Use the Forge** — pay gold to permanently scrap a random Starter from your deck. Cost ramps with each use this fight.
+
+## Keywords
+
+Many cards carry small re-usable behaviours. Watch for these chips on the cards:
+
+| Keyword | Effect |
+|---|---|
+| **Pierce** | ATK damage ignores Monster Shield. |
+| **Lifesteal** | ATK damage dealt also restores that much Morale. |
+| **Taunt** | Opposite Monster ATK is absorbed by this Hero. The Hero forfeits its action this turn. |
+| **Charge** | When recruited, this card goes to the top of your deck — guaranteed in your next draw. |
+| **Echo** | After resolving, returns to your hand instead of the discard pile. |
+
+## Spells
+
+Some market cards are **Spells** — they resolve immediately when clicked from your hand and don't take a hero slot. Spells with `Consume` are removed from the run after use, naturally thinning your deck.
+
+## Faction synergies
+
+Heroes have a **role**: Physical, Magical, or Tactical. Many cards have an **ally bonus** that fires when another card of the same role is on the field. Stack matching roles to compound the bonus.
+
+Each Big Bad has a weakness and a resistance. The pre-fight screen tells you which:
+- Heroes of the **weak-against** role deal **+50%** damage.
+- Heroes of the **strong-against** role deal **−50%** damage.
 
 ---
 
 ## Between Fights
 
-After surviving a fight you are offered **three Promoted Hero cards**. Pick one to add to your deck permanently before the next fight begins.
+After surviving a fight you are offered **three rewards**: usually two Promoted Heroes and one Treasure. Pick one to keep for the rest of the run.
 
-Promoted heroes are significantly stronger than market cards and cost nothing to play. Choose one that complements your current strategy.
+- **Promoted Heroes** replace a random Starter in your deck. They cost nothing to play and are significantly stronger than market cards.
+- **Treasures** sit outside your deck and trigger at hooks (start of turn, on recruit, end of turn, start of fight). They never dilute your draw.
+
+After fights 2 and 4, an **Event** fires before the reward screen. Each event presents a moral choice with permanent consequences — usually a "power vs purity" trade. Greedy choices may add a **Curse** card (a dead draw) to your deck.
+
+## Big Bad Intent
+
+Above the monster row, the **Big Bad Intent panel** shows exactly what the Big Bad will do next turn — its ATK damage and the names of the monsters it will summon. Use this to plan your recruits.
 
 ---
 
 ## Big Bads
 
-There are nine bosses split across three tiers of difficulty. Each run assigns one boss per fight, escalating in tier:
+Bosses are split across three tiers. Each run plays out as **two Tier-1 fights, two Tier-2 fights, then one Tier-3 climax** (sequence: 1, 1, 2, 2, 3).
 
-| Tier | Examples | Threat level |
+| Tier | Examples | Threat profile |
 |---|---|---|
-| 1 | Goblin Warchief, Plagued Bear | Light pressure, low HP and ATK |
-| 2 | Iron Golem, Serpent Queen | Medium difficulty, shields or gold drain |
-| 3 | Lich Sovereign | High HP, 5 ATK, spawns 3 monsters per turn |
+| 1 | Goblin Warchief, Plagued Bear | Light pressure, low HP. Tribe-themed monster pools (goblinoid / beast). |
+| 2 | Iron Golem, Serpent Queen, Wickerman | Medium difficulty. Shields, gold drain, or swarm pressure. |
+| 3 | Lich Sovereign, Voidweaver, Crimson Tyrant | High HP, high ATK, deck-killing or burst damage. |
 
-Each Big Bad has a unique monster pool it draws from. Some monsters deal damage, others drain your gold or disrupt your field.
+Each Big Bad pulls from a constrained monster pool by **tribe** (goblinoid, beast, construct, undead, serpent, void). Reading the Big Bad's pre-fight description tells you what to expect.
 
 ---
 

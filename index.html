@@ -63,41 +63,34 @@
     <div id="fight-stats">
       <!-- Big Bad panel -->
       <div class="entity-panel" id="bb-panel">
-        <div class="entity-panel-top">
-          <canvas id="bb-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
-          <div class="entity-info">
-            <div class="entity-name" id="bb-name">--</div>
-            <div class="entity-sub" id="bb-sub">--</div>
-            <div class="entity-stats">
-              <div class="stat-pill hp">&#9829; <span id="bb-hp">--</span></div>
-              <div class="stat-pill atk">&#9876; <span id="bb-atk">--</span></div>
-              <div class="stat-pill mon">&#9760; <span id="bb-mpt">--</span>/turn</div>
-            </div>
+        <canvas id="bb-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
+        <div class="entity-info">
+          <div class="entity-name" id="bb-name">--</div>
+          <div class="entity-sub" id="bb-sub">--</div>
+          <div class="entity-stats">
+            <div class="stat-pill hp">&#9829; <span id="bb-hp">--</span></div>
+            <div class="stat-pill atk">&#9876; <span id="bb-atk">--</span></div>
+            <div class="stat-pill mon">&#9760; <span id="bb-mpt">--</span>/turn</div>
           </div>
         </div>
-        <div class="hp-bar-wrap"><div class="hp-bar" id="bb-hp-bar" style="width:100%"></div></div>
       </div>
       <!-- City panel -->
       <div class="entity-panel" id="city-panel">
-        <div class="entity-panel-top">
-          <canvas id="city-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
-          <div class="entity-info">
-            <div class="entity-name" id="city-name">--</div>
-            <div class="entity-sub" id="city-sub">--</div>
-            <div class="entity-stats">
-              <div class="stat-pill mor">&#9873; <span id="city-morale">--</span></div>
-              <div class="stat-pill def">&#128737; <span id="city-def-display">0</span></div>
-              <div class="stat-pill mkt">&#127968; <span id="city-market-size">--</span></div>
-            </div>
-            <div class="entity-effects-mini" id="city-effects-mini">--</div>
+        <canvas id="city-sprite" class="entity-sprite-wrap" width="64" height="64"></canvas>
+        <div class="entity-info">
+          <div class="entity-name" id="city-name">--</div>
+          <div class="entity-sub" id="city-sub">--</div>
+          <div class="entity-stats">
+            <div class="stat-pill mor">&#9873; <span id="city-morale">--</span></div>
+            <div class="stat-pill def">&#128737; <span id="city-def-display">0</span></div>
+            <div class="stat-pill mkt">&#127968; <span id="city-market-size">--</span></div>
           </div>
+          <div class="entity-effects-mini" id="city-effects-mini">--</div>
         </div>
-        <div class="hp-bar-wrap"><div class="hp-bar morale-bar" id="city-morale-bar" style="width:100%"></div></div>
       </div>
-      <div class="fight-turn-info">
-        <div id="turn-counter">TURN <span id="turn-num">1</span></div>
-        <div id="phase-indicator">DRAW</div>
-      </div>
+      <div id="turn-counter">TURN <span id="turn-num">1</span></div>
+      <!-- Treasure inventory — shows out-of-deck treasures earned this run (Phase 5) -->
+      <div id="treasure-inventory"></div>
     </div>
 
     <!-- Board -->
@@ -115,6 +108,8 @@
         <div class="shield-pill city-def hidden" id="city-def-pill">&#128737; CITY DEF: <span id="city-def-val">0</span></div>
         <div class="shield-pill mon-shield hidden" id="mon-shield-pill">&#9876; MON SHIELD: <span id="mon-shield-val">0</span></div>
       </div>
+      <!-- Big Bad Intent panel — telegraphs what the Big Bad will do next turn -->
+      <div id="bb-intent-panel" class="bb-intent-panel"></div>
       <!-- Monster resolution order: right-to-left — initially hidden, shown by renderer -->
       <div id="monster-order-arrow" class="order-arrow-row monster-arrow-row">
         <div class="order-arrow-track monster-track">
@@ -181,6 +176,7 @@
           <span class="gold-icon">&#9830;</span>
           <span class="gold-val" id="gold-val">0</span>
           <span class="gold-label">GOLD</span>
+          <span class="gold-spent" id="gold-spent"></span>
         </div>
       </div>
       <div id="phase-bar">
@@ -209,6 +205,17 @@
 </div><!-- /#screen-fight -->
 
 <!-- ═══════════════════════════════════════════════════════════
+     BETWEEN-FIGHT EVENT (Phase 10)
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-event" class="screen">
+  <div class="event-frame">
+    <div class="event-title" id="event-title">EVENT</div>
+    <p class="event-desc" id="event-desc">An event begins.</p>
+    <div id="event-choices"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
      POST-FIGHT UPGRADE
 ═══════════════════════════════════════════════════════════ -->
 <div id="screen-upgrade" class="screen">
@@ -217,7 +224,7 @@
     <p id="upgrade-victory-msg">The battle is won. Choose your champion.</p>
   </div>
   <div id="upgrade-choices"></div>
-  <p class="screen-hint narrow">The chosen hero will permanently replace a random starter card in your deck. Your recruited heroes and market upgrades carry forward into the next fight.</p>
+  <p class="screen-hint narrow">The chosen hero will permanently replace a random starter card in your deck.</p>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -244,11 +251,11 @@
     cards_market.js    — calls Registry.register_cards_market()
     cards_upgrades.js  — calls Registry.register_cards_upgrades()
     cards_monster.js   — calls Registry.register_cards_monster(tier, [...])
-    01_data_enemies.js — calls Registry.register_big_bads(tier, [...])
-    01_data_levels.js  — calls Registry.register_cities()
+    big_bads.js        — calls Registry.register_big_bads(tier, [...])
+    cities.js          — calls Registry.register_cities()
 
   ES module (deferred, single entry point):
-    04_boot_main.js    — type="module"; imports engine, renderer, constants, app.
+    startup_validator.js — type="module"; imports engine, renderer, constants, app.
                            Runs on DOMContentLoaded after all classic scripts have run.
                            Wires the engine→renderer bridge, validates data, gates
                            Begin Run, and attaches event listeners.
@@ -260,10 +267,14 @@
 <script src="03_ui_art_painters.js"></script>
 <script src="01_data_cards_starter.js"></script>
 <script src="01_data_cards_market.js"></script>
+<script src="01_data_cards_spells.js"></script>
 <script src="01_data_cards_upgrades.js"></script>
+<script src="01_data_cards_curses.js"></script>
 <script src="01_data_cards_monster.js"></script>
 <script src="01_data_enemies.js"></script>
 <script src="01_data_levels.js"></script>
+<script src="01_data_treasures.js"></script>
+<script src="01_data_events.js"></script>
 <script type="module" src="04_boot_main.js"></script>
 
 </body>

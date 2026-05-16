@@ -359,52 +359,81 @@ const big_bad_art = {
     p(3,9,dscale); p(3,10,dscale); p(16,9,dscale); p(16,10,dscale);
   },
 
-  dread_hydra(canvas) {
+  wickerman(canvas) {
     const ctx = canvas.getContext('2d');
     const p = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x*4, y*4, 4, 4); };
     ctx.clearRect(0, 0, 72, 72);
-    const sc = '#2a6a18', dsc = '#163a0a', lsc = '#4a9a28', eye = '#ff2200', fang = '#e8e4cc', belly = '#4a7a3a';
+    const wood = '#5a3a1a', dwood = '#3a1a00', flame = '#cc4400', flame2 = '#ffaa00', skull = '#ccc8b0', smoke = '#444';
+    // Effigy head (skull-shaped)
+    for(let x=7;x<=11;x++) for(let y=2;y<=5;y++) p(x,y,skull);
+    p(8,4,dwood); p(10,4,dwood); // eye sockets
+    p(9,6,dwood); // mouth
+    // Wooden frame body — angled cross of branches
+    for(let y=6;y<=15;y++) p(9,y,wood);
+    for(let x=4;x<=14;x++) p(x,9,wood);
+    // Flame around base
+    for(let x=4;x<=14;x++) p(x,16,flame);
+    for(let x=5;x<=13;x+=2) p(x,15,flame);
+    for(let x=6;x<=12;x+=3) p(x,14,flame2);
+    // Tied bone offerings
+    p(6,11,dwood); p(12,11,dwood); p(7,13,dwood); p(11,13,dwood);
+    // Smoke trails
+    p(3,3,smoke); p(15,3,smoke); p(9,0,smoke); p(9,1,smoke);
+  },
 
-    // Left head (x:1-5, y:1-4)
-    for(let x=1;x<=5;x++) for(let y=1;y<=4;y++) p(x,y,sc);
-    p(2,0,lsc); p(4,0,lsc);
-    p(2,2,eye); p(4,2,eye);
-    p(2,4,fang); p(3,4,fang); p(4,4,fang);
-    p(1,1,dsc); p(5,1,dsc);
+  voidweaver(canvas) {
+    const ctx = canvas.getContext('2d');
+    const p = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x*4, y*4, 4, 4); };
+    ctx.clearRect(0, 0, 72, 72);
+    const dark = '#0a0014', vio = '#3a0066', vio2 = '#6e22ce', star = '#dabbff', eye = '#00ddff';
+    // Background void
+    for(let x=0;x<=17;x++) for(let y=0;y<=17;y++) p(x,y,dark);
+    // Tentacle rays out from centre
+    const cx = 9, cy = 9;
+    p(cx, cy, eye);
+    for(let r=2;r<=7;r++) {
+      const offsets = [[r,0],[-r,0],[0,r],[0,-r],[r,r],[-r,-r],[r,-r],[-r,r]];
+      for (const [dx, dy] of offsets) {
+        const x = cx+dx, y = cy+dy;
+        if (x>=0&&x<=17&&y>=0&&y<=17) p(x, y, r%2===0 ? vio : vio2);
+      }
+    }
+    // Centre eye
+    p(cx,cy,eye); p(cx-1,cy,vio2); p(cx+1,cy,vio2); p(cx,cy-1,vio2); p(cx,cy+1,vio2);
+    // Star points
+    p(2,2,star); p(15,2,star); p(2,15,star); p(15,15,star); p(8,1,star); p(1,8,star); p(16,8,star); p(8,16,star);
+  },
 
-    // Center head (x:7-11, y:0-4) — tallest, dominant
-    for(let x=7;x<=11;x++) for(let y=0;y<=4;y++) p(x,y,sc);
-    p(7,0,lsc); p(8,0,lsc); p(10,0,lsc); p(11,0,lsc);
-    p(8,2,eye); p(10,2,eye);
-    p(8,4,fang); p(9,4,fang); p(10,4,fang);
-
-    // Right head (x:13-17, y:1-5)
-    for(let x=13;x<=17;x++) for(let y=1;y<=5;y++) p(x,y,sc);
-    p(14,0,lsc); p(16,0,lsc);
-    p(14,3,eye); p(16,3,eye);
-    p(14,5,fang); p(15,5,fang); p(16,5,fang);
-    p(13,1,dsc); p(17,1,dsc);
-
-    // Necks
-    for(let x=2;x<=4;x++) for(let y=4;y<=9;y++) p(x,y,dsc);
-    p(5,5,dsc); p(5,6,dsc);
-    for(let x=8;x<=10;x++) for(let y=4;y<=9;y++) p(x,y,dsc);
-    for(let x=13;x<=15;x++) for(let y=5;y<=9;y++) p(x,y,dsc);
-    p(12,6,dsc); p(12,7,dsc);
-
-    // Body
-    for(let x=1;x<=16;x++) for(let y=9;y<=15;y++) p(x,y,sc);
-    for(let x=2;x<=15;x+=2) for(let y=10;y<=14;y+=2) p(x,y,dsc);
-    for(let x=3;x<=14;x+=2) for(let y=11;y<=13;y+=2) p(x,y,lsc);
-    for(let x=4;x<=13;x++) for(let y=14;y<=15;y++) p(x,y,belly);
-
-    // Tails
-    for(let x=12;x<=17;x++) p(x,15,dsc);
-    for(let x=14;x<=17;x++) p(x,16,dsc);
-    p(16,17,sc); p(17,17,sc);
-    for(let x=0;x<=5;x++) p(x,15,dsc);
-    for(let x=0;x<=3;x++) p(x,16,dsc);
-    p(0,17,sc); p(1,17,sc);
+  crimson_tyrant(canvas) {
+    const ctx = canvas.getContext('2d');
+    const p = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x*4, y*4, 4, 4); };
+    ctx.clearRect(0, 0, 72, 72);
+    const scale = '#8a1010', dscale = '#4a0000', plate = '#bb2020', gold = '#ccaa00', flame = '#ff8800', eye = '#ffff44';
+    // Horns
+    p(6,1,dscale); p(7,1,dscale); p(11,1,dscale); p(12,1,dscale);
+    p(6,2,scale); p(7,2,scale); p(11,2,scale); p(12,2,scale);
+    // Head
+    for(let x=6;x<=12;x++) for(let y=3;y<=7;y++) p(x,y,scale);
+    // Eyes
+    p(7,5,eye); p(11,5,eye);
+    // Snout / fangs
+    p(8,7,dscale); p(9,7,dscale); p(10,7,dscale); p(8,8,gold); p(10,8,gold);
+    // Crown
+    p(7,2,gold); p(9,1,gold); p(11,2,gold);
+    // Body — heavy plate
+    for(let x=4;x<=14;x++) for(let y=8;y<=14;y++) p(x,y,plate);
+    for(let x=5;x<=13;x+=2) for(let y=9;y<=13;y+=2) p(x,y,dscale);
+    // Chest gem
+    p(9,11,gold); p(8,11,gold); p(9,10,gold);
+    // Arms
+    for(let y=8;y<=14;y++) { p(3,y,plate); p(15,y,plate); }
+    // Hands holding flame
+    p(2,15,flame); p(3,15,flame); p(15,15,flame); p(16,15,flame);
+    p(2,16,gold); p(16,16,gold);
+    // Legs
+    for(let y=15;y<=17;y++) { p(6,y,plate); p(7,y,plate); p(11,y,plate); p(12,y,plate); }
+    // Embers
+    p(0,5,flame); p(17,6,flame); p(1,12,flame); p(17,13,flame);
   },
 
   lich_sovereign(canvas) {

@@ -4,7 +4,8 @@
 // no render() calls. The engine's run_resolve_step() is responsible for
 // calling render() exactly once per step after effects have been applied.
 //
-// Called by engine.js during the Resolution phase.
+// Called by engine.js during the Resolution phase and by trigger hook points
+// (on_recruit, on_play, on_death, on_turn_end).
 //
 // engine.js calls init_effects_bridge() once after the module graph resolves,
 // supplying the engine helpers that effects need. This avoids a circular
@@ -15,6 +16,12 @@
 //
 // To add a new effect type: add a case to apply_hero_effect or
 // apply_monster_effect and declare its shape in the card data files.
+//
+// Trigger system: every effect carries an optional `trigger` field. It defaults
+// to 'on_resolve' (the legacy behaviour). Dispatch is via dispatch_effects(),
+// which filters a card's effects list by the active trigger before applying.
+// Valid triggers are listed in TRIGGERS below; the validator in 04_boot_main.js
+// enforces this set.
 
 // Injected by engine.js via init_effects_bridge()
 let _pick_random;
@@ -55,26 +62,45 @@ export function init_effects_bridge(fns) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// PRIVATE HELPERS
+// TRIGGER DISPATCH
+// Effects on a card are tagged with a trigger. The engine fires
+// dispatch_effects(state, card, trigger, slot) at each hook point.
+// Effects whose `trigger` matches (default 'on_resolve') run; others wait.
 // ─────────────────────────────────────────────────────────────
 
+export const TRIGGERS = Object.freeze([
+  'on_recruit',  // when a card is bought from the market
+  'on_play',     // when a hero card is placed into a hero slot
+  'on_resolve',  // when a card resolves in the resolution sequence (legacy default)
+  'on_death',    // when a hero is killed by a monster effect
+  'on_turn_end', // at the end of resolution, before recruit phase
+  'passive',     // computed by other systems; never dispatched here directly
+]);
+
+const HERO_DISPATCHABLE = new Set(['on_recruit', 'on_play', 'on_resolve', 'on_death', 'on_turn_end']);
+
 /**
- * Draw `count` cards from the deck into the hand, reshuffling the discard
- * pile if the deck runs out mid-draw.  Returns the number actually drawn.
+ * Fires every effect on `card` whose `trigger` matches the given trigger.
+ * Side: 'H' or 'M' — picks the hero or monster handler.
+ * Effects with no `trigger` field default to 'on_resolve'.
  */
-function draw_cards_into_hand(state, count) {
-  let drawn = 0;
-  for (let i = 0; i < count; i++) {
-    if (state.run.deck.length === 0) {
-      if (state.run.discard.length === 0) break;
-      state.run.deck    = _shuffle_array(state.run.discard);
-      state.run.discard = [];
-      _log_entry('Deck reshuffled from discard.', 'log-phase');
-    }
-    state.run.hand.push(state.run.deck.pop());
-    drawn++;
+export function dispatch_effects(state, card, trigger, slot_index = 0, side = 'H') {
+  if (!card?.effects?.length) return;
+  for (const effect of card.effects) {
+    const t = effect.trigger ?? 'on_resolve';
+    if (t !== trigger) continue;
+    if (side === 'H') apply_hero_effect(state, effect, card, slot_index);
+    else              apply_monster_effect(state, effect, card, slot_index);
   }
-  return drawn;
+}
+
+/** True if `card` has at least one effect that fires on `trigger`. */
+export function card_has_trigger(card, trigger) {
+  if (!card?.effects?.length) return false;
+  for (const effect of card.effects) {
+    if ((effect.trigger ?? 'on_resolve') === trigger) return true;
+  }
+  return false;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -209,7 +235,12 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
 
     // ── kill_monster ─────────────────────────────────────────
     case 'kill_monster': {
-      const pool = _get_monster_pool(state.run.fight_number)
+      // get_monster_pool accepts a tier number. The active fight's tier is
+      // already implied by the Big Bad in state.fight, and the pool getter
+      // additionally filters by monster_tribes — so we ask for the same tier
+      // the engine uses this turn. Use the Big Bad's tier as the lookup.
+      const tier = state.fight.big_bad?.tier ?? 3;
+      const pool = _get_monster_pool(tier)
         .filter(def => !state.fight.monster_excluded_ids.has(def.id));
       if (pool.length === 0) {
         _log_entry(`${source_card.name}: all monster types already purged.`, 'log-effect');
@@ -290,7 +321,18 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
 
     // ── draw ──────────────────────────────────────────────────
     case 'draw': {
-      const drawn = draw_cards_into_hand(state, effect.amount ?? 1);
+      const count = effect.amount ?? 1;
+      let drawn = 0;
+      for (let i = 0; i < count; i++) {
+        if (state.run.deck.length === 0) {
+          if (state.run.discard.length === 0) break;
+          state.run.deck    = _shuffle_array(state.run.discard);
+          state.run.discard = [];
+          _log_entry('Deck reshuffled from discard.', 'log-phase');
+        }
+        state.run.hand.push(state.run.deck.pop());
+        drawn++;
+      }
       if (drawn > 0) _log_entry(`${source_card.name}: drew ${drawn} card(s).`, 'log-effect');
       else           _log_entry(`${source_card.name}: draw — no cards available.`, 'log-effect');
       break;
@@ -317,11 +359,6 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
       state.run.hand    = state.run.hand.filter(c => c.uid !== scrapped.uid);
       state.run.discard = state.run.discard.filter(c => c.uid !== scrapped.uid);
       state.run.deck    = state.run.deck.filter(c => c.uid !== scrapped.uid);
-      // Also drop from recruits_owned so a hero scrap is permanent across fights.
-      if (Array.isArray(state.run.recruits_owned)) {
-        const ridx = state.run.recruits_owned.indexOf(scrapped.id);
-        if (ridx !== -1) state.run.recruits_owned.splice(ridx, 1);
-      }
       _log_entry(`${source_card.name}: ${scrapped.name} scrapped permanently!`, 'log-effect');
       break;
     }
@@ -333,271 +370,110 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
       break;
     }
 
-    // ── ally_bonus ────────────────────────────────────────────
-    // Star-Realms-style faction synergy. Counts heroes (including self) in the
-    // hero_field whose role matches effect.role. If count >= effect.threshold,
-    // applies effect.amount to effect.stat ('atk' = self only, others = global).
-    case 'ally_bonus': {
-      const target_role = effect.role ?? source_card.role;
-      const threshold   = effect.threshold ?? 2;
-      const ally_count  = state.fight.hero_field
-        .filter(c => c && c.role === target_role).length;
-      if (ally_count < threshold) {
-        _log_entry(`${source_card.name}: ally bonus — needs ${threshold} ${target_role} (have ${ally_count}).`, 'log-effect');
-        break;
-      }
-      if (effect.stat === 'atk') {
-        source_card.temp_atk_mod += effect.amount;
-        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} ATK (${ally_count} ${target_role})!`, 'log-effect');
-      } else if (effect.stat === 'gold') {
-        state.fight.gold_pool += effect.amount;
-        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} Gold!`, 'log-effect');
-      } else if (effect.stat === 'shield') {
-        state.fight.city_def += effect.amount;
-        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} Defence!`, 'log-effect');
-      } else if (effect.stat === 'morale') {
-        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + effect.amount);
-        _log_entry(`${source_card.name}: ally bonus — +${effect.amount} Morale!`, 'log-effect');
-      }
-      break;
-    }
-
-    // ── combo_bonus ───────────────────────────────────────────
-    // Triggers when a hero matching effect.requires/value has already RESOLVED
-    // earlier this turn. Heroes resolve left→right, so placement order is the
-    // strategic lever. requires: 'role' | 'type'. Excludes source card itself.
-    case 'combo_bonus': {
-      const match_field = effect.requires === 'type' ? 'type' : 'role';
-      const target_val  = effect.value;
-      const matched = state.fight.hero_field.find(c =>
-        c && c.uid !== source_card.uid && c.resolved && c[match_field] === target_val
-      );
-      if (!matched) {
-        _log_entry(`${source_card.name}: combo — needs prior ${target_val} hero this turn.`, 'log-effect');
-        break;
-      }
-      if (effect.stat === 'atk') {
-        source_card.temp_atk_mod += effect.amount;
-        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} ATK!`, 'log-effect');
-      } else if (effect.stat === 'gold') {
-        state.fight.gold_pool += effect.amount;
-        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} Gold!`, 'log-effect');
-      } else if (effect.stat === 'shield') {
-        state.fight.city_def += effect.amount;
-        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} Defence!`, 'log-effect');
-      } else if (effect.stat === 'morale') {
-        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + effect.amount);
-        _log_entry(`${source_card.name}: combo with ${matched.name} — +${effect.amount} Morale!`, 'log-effect');
-      } else if (effect.stat === 'draw') {
-        const drawn = draw_cards_into_hand(state, effect.amount ?? 1);
-        _log_entry(`${source_card.name}: combo with ${matched.name} — drew ${drawn}!`, 'log-effect');
-      }
-      break;
-    }
-
-    // ── chain_bonus ───────────────────────────────────────────
-    // Scaling combo. Counts every hero matching effect.requires/value that has
-    // already RESOLVED earlier this turn (excludes self), and applies
-    // effect.amount per match. Heroes resolve left→right, so stacking them in
-    // order produces escalating bursts.
-    case 'chain_bonus': {
-      const match_field = effect.requires === 'type' ? 'type' : 'role';
-      const target_val  = effect.value;
-      const matches = state.fight.hero_field.filter(c =>
-        c && c.uid !== source_card.uid && c.resolved && c[match_field] === target_val
-      );
-      if (matches.length === 0) {
-        _log_entry(`${source_card.name}: chain — no prior ${target_val} this turn.`, 'log-effect');
-        break;
-      }
-      const total = effect.amount * matches.length;
-      if (effect.stat === 'atk') {
-        source_card.temp_atk_mod += total;
-        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} ATK!`, 'log-effect');
-      } else if (effect.stat === 'gold') {
-        state.fight.gold_pool += total;
-        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} Gold!`, 'log-effect');
-      } else if (effect.stat === 'shield') {
-        state.fight.city_def += total;
-        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} Defence!`, 'log-effect');
-      } else if (effect.stat === 'morale') {
-        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + total);
-        _log_entry(`${source_card.name}: chain ×${matches.length} — +${total} Morale!`, 'log-effect');
-      }
-      break;
-    }
-
-    // ── multistrike ───────────────────────────────────────────
-    // Card's ATK fires N times this resolution. Each strike absorbs shield
-    // independently — great for shield-stripping. Engine reads _multistrike.
-    case 'multistrike': {
-      source_card._multistrike = effect.count ?? 2;
-      break;
-    }
-
-    // ── lifesteal ─────────────────────────────────────────────
-    // Heal city Morale equal to the damage this card dealt to the Big Bad.
-    // Engine reads _lifesteal during ATK resolution.
-    case 'lifesteal': {
-      source_card._lifesteal = true;
-      break;
-    }
-
-    // ── bulwark ───────────────────────────────────────────────
-    // Damage absorbed by monster shield is converted into city Defence.
-    // Engine reads _bulwark during ATK resolution.
-    case 'bulwark': {
-      source_card._bulwark = true;
-      break;
-    }
-
-    // ── scaling_atk ───────────────────────────────────────────
-    // Adds floor(state_value / divisor) to source card's ATK this turn.
-    // sources: 'gold_pool', 'city_def', 'hand_size', 'monster_shield',
-    //          'city_morale_lost' (max - current).
-    case 'scaling_atk': {
-      const divisor = Math.max(1, effect.divisor ?? 1);
-      let raw_value = 0;
-      switch (effect.source) {
-        case 'gold_pool':        raw_value = state.fight.gold_pool; break;
-        case 'city_def':         raw_value = state.fight.city_def; break;
-        case 'hand_size':        raw_value = state.run.hand.length; break;
-        case 'monster_shield':   raw_value = state.fight.monster_shield; break;
-        case 'city_morale_lost': raw_value = state.fight.city.max_morale - state.fight.city_morale; break;
-        default:
-          console.warn(`scaling_atk: unknown source '${effect.source}' on '${source_card.id}'.`);
-          break;
-      }
-      const bonus = Math.floor(raw_value / divisor);
-      source_card.temp_atk_mod += bonus;
-      _log_entry(`${source_card.name}: scaling — +${bonus} ATK (${effect.source}=${raw_value}).`, 'log-effect');
-      break;
-    }
-
-    // ── sacrifice ─────────────────────────────────────────────
-    // Permanently scraps an adjacent hero in your field, in exchange for a
-    // big bonus. target: 'adjacent_starter' | 'adjacent_any'. Encourages
-    // sticking weak starters next to your power cards on purpose.
-    //
-    // Target selection is deterministic: always pick the *lowest cost* adjacent
-    // candidate. This prevents the unpleasant case where 'adjacent_any' randomly
-    // banishes the player's Phoenix Blade. Ties broken by left-most slot.
-    case 'sacrifice': {
-      const adjacent_indices = [slot_index - 1, slot_index + 1]
-        .filter(i => i >= 0 && i < state.fight.hero_field.length);
-      const candidates = adjacent_indices
-        .map(i => ({ idx: i, card: state.fight.hero_field[i] }))
-        .filter(({ card }) => {
-          if (!card) return false;
-          if (effect.target === 'adjacent_starter') return card.type === 'starter';
-          return true;  // 'adjacent_any'
-        });
-      if (candidates.length === 0) {
-        _log_entry(`${source_card.name}: sacrifice — no adjacent target.`, 'log-effect');
-        break;
-      }
-      // Sort by cost ascending; ties broken by slot index (left-first).
-      candidates.sort((a, b) => (a.card.cost - b.card.cost) || (a.idx - b.idx));
-      const chosen = candidates[0];
-      // Banish from the run entirely. Also drop from recruits_owned so a
-      // sacrificed hero doesn't reappear in the next fight's deck.
-      state.run.deck    = state.run.deck.filter(c => c.uid !== chosen.card.uid);
-      state.run.hand    = state.run.hand.filter(c => c.uid !== chosen.card.uid);
-      state.run.discard = state.run.discard.filter(c => c.uid !== chosen.card.uid);
-      state.fight.hero_field[chosen.idx] = null;
-      if (Array.isArray(state.run.recruits_owned)) {
-        const ridx = state.run.recruits_owned.indexOf(chosen.card.id);
-        if (ridx !== -1) state.run.recruits_owned.splice(ridx, 1);
-      }
-      _log_entry(`${source_card.name}: sacrificed ${chosen.card.name}!`, 'log-effect');
-
-      if (effect.stat === 'atk') {
-        source_card.temp_atk_mod += effect.amount;
-        _log_entry(`${source_card.name}: +${effect.amount} ATK from sacrifice.`, 'log-effect');
-      } else if (effect.stat === 'gold') {
-        state.fight.gold_pool += effect.amount;
-        _log_entry(`${source_card.name}: +${effect.amount} Gold from sacrifice.`, 'log-effect');
-      } else if (effect.stat === 'morale') {
-        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + effect.amount);
-        _log_entry(`${source_card.name}: +${effect.amount} Morale from sacrifice.`, 'log-effect');
-      } else if (effect.stat === 'shield') {
-        state.fight.city_def += effect.amount;
-        _log_entry(`${source_card.name}: +${effect.amount} Defence from sacrifice.`, 'log-effect');
-      }
-      break;
-    }
-
-    // ── scrap_self ────────────────────────────────────────────
-    // Marks the card to be permanently removed from the run after resolution
-    // instead of going to discard. Star-Realms-style one-shot. Engine reads
-    // _scrap_after_resolve in finish_resolution().
-    case 'scrap_self': {
-      source_card._scrap_after_resolve = true;
-      _log_entry(`${source_card.name}: spent — banished from your deck.`, 'log-effect');
-      break;
-    }
-
-    // ── pierce ────────────────────────────────────────────────
-    // This card's ATK ignores monster shield. Engine reads _pierce in
-    // resolve_hero_card() when computing shield absorption.
-    case 'pierce': {
-      source_card._pierce = true;
-      break;
-    }
-
-    // ── bodyguard ─────────────────────────────────────────────
-    // Adds a 'kill-interception' charge to state.fight.bodyguard_charges.
-    // The first monster 'kill' effect consumes one charge and is negated.
-    // Counterplay to Death Wraith / Banshee / Lich Sovereign.
-    case 'bodyguard': {
-      state.fight.bodyguard_charges = (state.fight.bodyguard_charges ?? 0) + 1;
-      _log_entry(`${source_card.name}: stands guard — next Slay will be intercepted.`, 'log-effect');
-      break;
-    }
-
-    // ── inspire ───────────────────────────────────────────────
-    // Clears all current enrage stacks on the Big Bad by resetting atk to
-    // base_atk_for_inspire (the value before any enrage). Mechanically: store
-    // base atk on the BB the first time enrage applies, then on inspire reset
-    // bb.atk to that stored value. This does NOT undo weaken_atk_next.
-    case 'inspire': {
-      const bb = state.fight.big_bad;
-      if (bb._base_atk_for_inspire === undefined) {
-        _log_entry(`${source_card.name}: inspire — no enrage to clear.`, 'log-effect');
-      } else {
-        const cleared = bb.atk - bb._base_atk_for_inspire;
-        bb.atk = bb._base_atk_for_inspire;
-        bb._enrage_stacks = 0;
-        _log_entry(`${source_card.name}: inspire — ${bb.name} ATK reset (-${cleared}).`, 'log-effect');
-      }
-      break;
-    }
-
     // ── field_bonus ───────────────────────────────────────────
+    // Conditional bonus that fires once at resolve time. The `condition`
+    // selects what to check; the `stat`/`amount` pair selects the payoff.
+    // For per-card scaling (e.g. +1 ATK per Magical ally), use
+    // condition='per_role_match' — the multiplier is the count of matching
+    // OTHER cards in the field (excluding source).
     case 'field_bonus': {
-      let condition_met = false;
+      let multiplier = 0;
       if (effect.condition === 'adjacent_role_match') {
-        condition_met = _get_adjacent_cards(state, 'H', slot_index).some(c => c.role === source_card.role);
+        multiplier = _get_adjacent_cards(state, 'H', slot_index).some(c => c.role === source_card.role) ? 1 : 0;
       } else if (effect.condition === 'field_count_gte') {
-        condition_met = state.fight.hero_field.filter(Boolean).length >= (effect.threshold ?? 2);
+        multiplier = state.fight.hero_field.filter(Boolean).length >= (effect.threshold ?? 2) ? 1 : 0;
+      } else if (effect.condition === 'per_role_match') {
+        const target_role = effect.role ?? source_card.role;
+        multiplier = state.fight.hero_field.filter(c => c && c.uid !== source_card.uid && c.role === target_role).length;
       }
-      if (!condition_met) {
+      if (multiplier === 0) {
         _log_entry(`${source_card.name}: field bonus — condition not met.`, 'log-effect');
         break;
       }
+      const total = effect.amount * multiplier;
       if (effect.stat === 'atk') {
-        source_card.temp_atk_mod += effect.amount;
-        _log_entry(`${source_card.name}: field bonus — +${effect.amount} ATK!`, 'log-effect');
+        source_card.temp_atk_mod += total;
+        _log_entry(`${source_card.name}: field bonus — +${total} ATK!`, 'log-effect');
       } else if (effect.stat === 'gold') {
-        state.fight.gold_pool += effect.amount;
-        _log_entry(`${source_card.name}: field bonus — +${effect.amount} Gold!`, 'log-effect');
+        state.fight.gold_pool += total;
+        _log_entry(`${source_card.name}: field bonus — +${total} Gold!`, 'log-effect');
       } else if (effect.stat === 'shield') {
-        state.fight.city_def += effect.amount;
-        _log_entry(`${source_card.name}: field bonus — +${effect.amount} Defence!`, 'log-effect');
+        state.fight.city_def += total;
+        _log_entry(`${source_card.name}: field bonus — +${total} Defence!`, 'log-effect');
       } else if (effect.stat === 'morale') {
-        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + effect.amount);
-        _log_entry(`${source_card.name}: field bonus — +${effect.amount} Morale!`, 'log-effect');
+        state.fight.city_morale = Math.min(state.fight.city.max_morale, state.fight.city_morale + total);
+        _log_entry(`${source_card.name}: field bonus — +${total} Morale!`, 'log-effect');
       }
+      break;
+    }
+
+    // ── gain_gold ─────────────────────────────────────────────
+    case 'gain_gold': {
+      state.fight.gold_pool += effect.amount;
+      _log_entry(`${source_card.name}: +${effect.amount} Gold.`, 'log-effect');
+      break;
+    }
+
+    // ── gain_morale ───────────────────────────────────────────
+    case 'gain_morale': {
+      state.fight.city_morale = Math.min(
+        state.fight.city.max_morale,
+        state.fight.city_morale + effect.amount,
+      );
+      _log_entry(`${source_card.name}: +${effect.amount} Morale.`, 'log-morale');
+      break;
+    }
+
+    // ── gain_shield ───────────────────────────────────────────
+    case 'gain_shield': {
+      state.fight.city_def += effect.amount;
+      _log_entry(`${source_card.name}: +${effect.amount} City Defence.`, 'log-effect');
+      break;
+    }
+
+    // ── damage ────────────────────────────────────────────────
+    // Generic damage to the Big Bad. Useful for spell/treasure effects that
+    // deal damage outside the resolve phase. Respects monster_shield.
+    case 'damage': {
+      const amount      = effect.amount ?? 0;
+      const target      = effect.target ?? 'big_bad';
+      if (target !== 'big_bad') {
+        console.warn(`damage: unsupported target '${target}'.`);
+        break;
+      }
+      const blocked = effect.pierce ? 0 : Math.min(state.fight.monster_shield, amount);
+      const dealt   = amount - blocked;
+      if (!effect.pierce) state.fight.monster_shield -= blocked;
+      if (dealt > 0) {
+        state.fight.big_bad.hp = Math.max(0, state.fight.big_bad.hp - dealt);
+        _log_entry(`${source_card.name}: ${dealt} damage to ${state.fight.big_bad.name}.`, 'log-hero');
+      } else {
+        _log_entry(`${source_card.name}: damage absorbed.`, 'log-hero');
+      }
+      break;
+    }
+
+    // ── summon_ally ───────────────────────────────────────────
+    // Place a card by id into the first empty hero slot. Skipped silently if
+    // no slot is available so summoning during a full field doesn't error.
+    case 'summon_ally': {
+      const def = _find_card_def_by_id(effect.card_id);
+      if (!def) {
+        console.warn(`summon_ally: unknown card id '${effect.card_id}'.`);
+        break;
+      }
+      const slot = state.fight.hero_field.indexOf(null);
+      if (slot === -1) {
+        _log_entry(`${source_card.name}: summon — no empty slot.`, 'log-effect');
+        break;
+      }
+      const summoned = _create_card_instance(def);
+      summoned.active   = true;
+      summoned.resolved = false;
+      summoned.injected = true;
+      state.fight.hero_field[slot] = summoned;
+      state.turn.active_resolution_sequence.splice(state.turn.resolving_step + 1, 0, { side: 'H', slot });
+      _log_entry(`${source_card.name}: summoned ${summoned.name}!`, 'log-effect');
       break;
     }
 
@@ -635,59 +511,11 @@ function find_next_pending_step(state, target_side) {
 // slot_index   — the monster field slot of source_card (for future spatial effects)
 // ─────────────────────────────────────────────────────────────
 
-export function apply_monster_effect(state, effect, source_card, _slot_index = 0) {
+export function apply_monster_effect(state, effect, source_card, slot_index = 0) {  // eslint-disable-line no-unused-vars
   switch (effect.type) {
 
-    // ── corrupt ──────────────────────────────────────────────
-    // Marks N random non-corrupted cards across the player's deck/hand/discard
-    // as corrupted. Corrupted cards skip resolution entirely (no stats, no
-    // effects). The 'cleanse' hero effect removes the flag.
-    case 'corrupt': {
-      const count = effect.count ?? 1;
-      const all_cards = [
-        ...state.run.deck, ...state.run.hand, ...state.run.discard,
-      ].filter(c => c && !c.corrupted);
-      if (all_cards.length === 0) {
-        _log_entry(`${source_card.name}: corrupt — no eligible cards.`, 'log-monster');
-        break;
-      }
-      const shuffled = _shuffle_array(all_cards).slice(0, count);
-      for (const c of shuffled) c.corrupted = true;
-      _log_entry(`${source_card.name}: corrupted ${shuffled.length} of your cards!`, 'log-monster');
-      break;
-    }
-
-    // ── enrage ───────────────────────────────────────────────
-    // Permanently buffs the Big Bad's ATK by effect.amount for the rest of
-    // the fight. Stacks, but capped by ENRAGE_MAX_STACK applications. On the
-    // first stack we record the BB's base ATK so the hero 'inspire' effect
-    // can reset it.
-    case 'enrage': {
-      const ENRAGE_MAX_STACK = 4;  // mirrors constant; kept inline to avoid an import.
-      const bb = state.fight.big_bad;
-      const amt = effect.amount ?? 1;
-      bb._enrage_stacks = bb._enrage_stacks ?? 0;
-      if (bb._base_atk_for_inspire === undefined) bb._base_atk_for_inspire = bb.atk;
-      if (bb._enrage_stacks >= ENRAGE_MAX_STACK) {
-        _log_entry(`${source_card.name}: ${bb.name} cannot enrage further (cap reached).`, 'log-monster');
-        break;
-      }
-      bb.atk            += amt;
-      bb._enrage_stacks += 1;
-      _log_entry(`${source_card.name}: ${bb.name} enraged — ATK permanently +${amt} (${bb._enrage_stacks}/${ENRAGE_MAX_STACK})!`, 'log-monster');
-      break;
-    }
-
     // ── kill ─────────────────────────────────────────────────
-    // Permadeath effect. If the player has accumulated any 'bodyguard' charges
-    // (state.fight.bodyguard_charges > 0), one charge is consumed and the
-    // kill is fully negated — counterplay to Death Wraith / Banshee.
     case 'kill': {
-      if ((state.fight.bodyguard_charges ?? 0) > 0) {
-        state.fight.bodyguard_charges -= 1;
-        _log_entry(`${source_card.name}: Slay intercepted by a Bodyguard! (${state.fight.bodyguard_charges} charge(s) left)`, 'log-effect');
-        break;
-      }
       const killable = state.fight.hero_field.filter(Boolean);
       if (killable.length === 0) {
         _log_entry(`${source_card.name}: kill — no hero target.`, 'log-effect');
@@ -695,15 +523,26 @@ export function apply_monster_effect(state, effect, source_card, _slot_index = 0
       }
       const killed     = _pick_random(killable);
       const kill_index = state.fight.hero_field.indexOf(killed);
+
+      // Fire on_death triggers BEFORE removing the card so deathrattles can
+      // read the card's slot and field state. Effects may even prevent removal
+      // by setting killed.death_prevented (Iron Standard treasure pattern).
+      for (const eff of (killed.effects ?? [])) {
+        if ((eff.trigger ?? 'on_resolve') === 'on_death') {
+          apply_hero_effect(state, eff, killed, kill_index);
+        }
+      }
+
+      if (killed.death_prevented) {
+        killed.death_prevented = false;
+        _log_entry(`${source_card.name}: ${killed.name} survived a killing blow!`, 'log-effect');
+        break;
+      }
+
       state.fight.hero_field[kill_index] = null;
       state.run.deck    = state.run.deck.filter(c => c.uid !== killed.uid);
       state.run.hand    = state.run.hand.filter(c => c.uid !== killed.uid);
       state.run.discard = state.run.discard.filter(c => c.uid !== killed.uid);
-      // Also remove from run.recruits_owned so it doesn't resurrect next fight.
-      if (Array.isArray(state.run.recruits_owned)) {
-        const ridx = state.run.recruits_owned.indexOf(killed.id);
-        if (ridx !== -1) state.run.recruits_owned.splice(ridx, 1);
-      }
       _log_entry(`${source_card.name}: ${killed.name} slain and deleted from the run!`, 'log-monster');
       break;
     }
