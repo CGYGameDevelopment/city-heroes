@@ -247,11 +247,17 @@ function render_field(state) {
 function render_hand(state) {
   const hand_row_el = document.getElementById('hand-row');
   hand_row_el.replaceChildren();
+  const hero_field_full = state.fight.hero_field.every(slot => slot !== null && slot !== undefined);
   for (const hand_card of state.run.hand) {
     const hand_card_el = make_card_element(hand_card, hand_card.uid === App.ui_state.selected_hand_uid, false);
     if (state.turn.phase === 'HEROES') {
       hand_card_el.classList.add('hand-card');
-      hand_card_el.addEventListener('click', () => _on_hand_card_click(hand_card.uid));
+      if (hero_field_full) {
+        hand_card_el.classList.add('unplayable');
+        hand_card_el.title = 'No free hero slots — heroes resolve first.';
+      } else {
+        hand_card_el.addEventListener('click', () => _on_hand_card_click(hand_card.uid));
+      }
     }
     hand_row_el.appendChild(hand_card_el);
   }
@@ -494,7 +500,7 @@ function render_card_into_element(card, card_el, large = false, display_cost = n
     card_el.appendChild(cost_badge_el);
   }
 
-  if (card.level !== undefined) {
+  if (card.level !== undefined && card.level > 0) {
     const level_badge_el = make_level_badge(card.level);
     level_badge_el.classList.add('level-badge-overlay');
     card_el.appendChild(level_badge_el);
@@ -549,10 +555,7 @@ const KEYWORD_DESCRIPTIONS = {
 function make_empty_slot(label_text) {
   const slot_el = document.createElement('div');
   slot_el.className = 'card empty-slot';
-  const label_el = document.createElement('span');
-  label_el.className   = 'slot-label';
-  label_el.textContent = label_text;
-  slot_el.appendChild(label_el);
+  if (label_text) slot_el.title = label_text;
   return slot_el;
 }
 
@@ -841,7 +844,7 @@ export function log_entry(text, css_class = '') {
   log_container.scrollTop = log_container.scrollHeight;
 }
 
-export function log_phase(text) { log_entry(text, 'log-phase'); }
+export function log_phase(text) { log_entry(text, 'log-section'); }
 
 export function flash_notification(text) {
   const notification_el = document.getElementById('notification');

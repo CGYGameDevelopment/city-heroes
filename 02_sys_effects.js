@@ -8,6 +8,10 @@ const DEFAULT_DAMAGE_AMOUNT = 0;
 const MULTIPLIER_TRUE = 1;
 const MULTIPLIER_FALSE = 0;
 
+function pluralize(count, singular, plural = singular + 's') {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 let _pick_random;
 let _shuffle_array;
 let _get_adjacent_cards;
@@ -219,7 +223,7 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
           total_cleansed++;
         }
       }
-      _log_entry(`${source_card.name}: cleansed ${total_cleansed} corrupted card(s).`, 'log-effect');
+      _log_entry(`${source_card.name}: cleansed ${pluralize(total_cleansed, 'corrupted card')}.`, 'log-effect');
       break;
     }
 
@@ -274,7 +278,7 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
       );
       const target_field = effect.target_side === 'hero' ? state.fight.hero_field : state.fight.monster_field;
       const target_label = target_field[target_slot]?.name ?? effect.target_side;
-      _log_entry(`${source_card.name}: ${target_label} stopped — ${removed_step_count} step(s) removed!`, 'log-effect');
+      _log_entry(`${source_card.name}: ${target_label} stopped — ${pluralize(removed_step_count, 'step')} removed!`, 'log-effect');
       break;
     }
 
@@ -291,7 +295,7 @@ export function apply_hero_effect(state, effect, source_card, slot_index = 0) {
         state.run.hand.push(state.run.deck.pop());
         cards_drawn++;
       }
-      if (cards_drawn > 0) _log_entry(`${source_card.name}: drew ${cards_drawn} card(s).`, 'log-effect');
+      if (cards_drawn > 0) _log_entry(`${source_card.name}: drew ${pluralize(cards_drawn, 'card')}.`, 'log-effect');
       else                 _log_entry(`${source_card.name}: draw — no cards available.`, 'log-effect');
       break;
     }

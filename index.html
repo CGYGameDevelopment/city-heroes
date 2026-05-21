@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>City Heroes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
   <link rel="stylesheet" href="03_ui_styles.css">
 </head>
 <body>
@@ -56,9 +59,9 @@
           <div class="entity-name" id="bb-name">--</div>
           <div class="entity-sub" id="bb-sub">--</div>
           <div class="entity-stats">
-            <div class="stat-pill hp">&#9829; <span id="bb-hp">--</span></div>
-            <div class="stat-pill atk">&#9876; <span id="bb-atk">--</span></div>
-            <div class="stat-pill mon">&#9760; <span id="bb-mpt">--</span>/turn</div>
+            <div class="stat-pill hp"  title="Big Bad HP (current / max)">&#9829; <span id="bb-hp">--</span></div>
+            <div class="stat-pill atk" title="Big Bad attack damage per turn">&#9876; <span id="bb-atk">--</span></div>
+            <div class="stat-pill mon" title="Monsters summoned per turn">&#9760; <span id="bb-mpt">--</span>/turn</div>
           </div>
         </div>
       </div>
@@ -68,9 +71,9 @@
           <div class="entity-name" id="city-name">--</div>
           <div class="entity-sub" id="city-sub">--</div>
           <div class="entity-stats">
-            <div class="stat-pill mor">&#9873; <span id="city-morale">--</span></div>
-            <div class="stat-pill def">&#128737; <span id="city-def-display">0</span></div>
-            <div class="stat-pill mkt">&#127968; <span id="city-market-size">--</span></div>
+            <div class="stat-pill mor" title="City morale (current / max). Lose if it hits 0.">&#9873; <span id="city-morale">--</span></div>
+            <div class="stat-pill def" title="City defense — absorbs incoming damage">&#128737; <span id="city-def-display">0</span></div>
+            <div class="stat-pill mkt" title="Market slots unlocked (current / max)">&#127968; <span id="city-market-size">--</span></div>
           </div>
           <div class="entity-effects-mini" id="city-effects-mini">--</div>
         </div>

@@ -455,7 +455,7 @@ export function on_phase_btn() {
 function run_draw_phase(state) {
   reset_turn_state(state);
   state.turn.phase = 'DRAW';
-  _renderer.log_phase('-- Draw Phase --');
+  _renderer.log_phase('Draw Phase');
   _renderer.render();
   setTimeout(() => {
 
@@ -548,7 +548,7 @@ export function build_next_intent(state) {
 
 function run_big_bad_phase(state) {
   state.turn.phase = 'BIG_BAD';
-  _renderer.log_phase('-- Big Bad Phase --');
+  _renderer.log_phase('Big Bad Phase');
   _renderer.render();
 
   const big_bad = state.fight.big_bad;
@@ -671,7 +671,7 @@ function begin_resolution(state) {
 
   state.turn.active_resolution_sequence = build_resolution_sequence(state);
 
-  _renderer.log_phase('-- Resolution --');
+  _renderer.log_phase('Resolution');
   schedule_next_resolve_step(state);
 }
 

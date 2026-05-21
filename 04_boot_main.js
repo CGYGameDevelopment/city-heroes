@@ -80,7 +80,8 @@ function validate_card_def(card_def, source_label) {
     } else {
       const unknown_keywords = card_def.keywords.filter(keyword => !VALID_KEYWORDS.has(keyword));
       if (unknown_keywords.length) {
-        error_messages.push(`${error_tag} unknown keyword(s): '${unknown_keywords.join("', '")}'.`);
+        const kw_word = unknown_keywords.length === 1 ? 'keyword' : 'keywords';
+        error_messages.push(`${error_tag} unknown ${kw_word}: '${unknown_keywords.join("', '")}'.`);
       }
     }
   }
@@ -109,7 +110,8 @@ function validate_card_def(card_def, source_label) {
         } else {
           const invalid_zones = effect_def.zones.filter(zone_name => !VALID_TRANSFORM_ZONES.has(zone_name));
           if (invalid_zones.length) {
-            error_messages.push(`${error_tag} effect[${effect_index}] (transform) invalid zone(s): '${invalid_zones.join("', '")}'.`);
+            const zone_word = invalid_zones.length === 1 ? 'zone' : 'zones';
+            error_messages.push(`${error_tag} effect[${effect_index}] (transform) invalid ${zone_word}: '${invalid_zones.join("', '")}'.`);
           }
         }
         if (typeof effect_def.replace_with !== 'string' || !effect_def.replace_with.trim()) {
@@ -376,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (startup_errors.length > 0) {
     begin_run_btn.textContent = 'FAILED TO LOAD';
-    begin_run_btn.title       = `${startup_errors.length} error(s) — see console.`;
+    begin_run_btn.title       = `${startup_errors.length} ${startup_errors.length === 1 ? 'error' : 'errors'} — see console.`;
     startup_errors.forEach(error_message => console.error('City Heroes:', error_message));
     return;
   }
