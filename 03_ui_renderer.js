@@ -9,7 +9,7 @@ import { App } from './00_core_app.js';
 const SIDE_HERO                       = 'H';
 const SIDE_MONSTER                    = 'M';
 const SVG_NAMESPACE                   = 'http://www.w3.org/2000/svg';
-const IN_FIGHT_SPRITE_SIZE            = 64;
+const IN_FIGHT_SPRITE_SIZE            = 96;
 const CARD_CANVAS_LARGE_WIDTH         = 180;
 const CARD_CANVAS_LARGE_HEIGHT        = 140;
 const CARD_CANVAS_NORMAL_WIDTH        = 120;
