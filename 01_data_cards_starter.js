@@ -15,7 +15,7 @@ const cards_starter = [
     shield:   0,
     effects:  [],
     desc:     "A bard apprentice with a coin trick. Gain 1 Gold.",
-    art:      make_art_painter('starter'),
+    art:      make_art_painter('starter', 'bard'),
   },
 
   {
@@ -32,7 +32,7 @@ const cards_starter = [
     shield:   0,
     effects:  [],
     desc:     "A young bard spreading word for tips. Gain 2 Gold.",
-    art:      make_art_painter('starter'),
+    art:      make_art_painter('starter', 'bard'),
   },
 
   {
@@ -51,7 +51,7 @@ const cards_starter = [
       { type: 'draw', amount: 1 },
     ],
     desc:     "A fighter recruit minds the wall. Gain 2 Defence. Draw 1 card.",
-    art:      make_art_painter('starter'),
+    art:      make_art_painter('starter', 'fighter'),
   },
 
   {
@@ -68,7 +68,7 @@ const cards_starter = [
     shield:   1,
     effects:  [],
     desc:     "A barbarian recruit, fresh to rage. Deal 2 Physical damage. Gain 1 Defence.",
-    art:      make_art_painter('starter'),
+    art:      make_art_painter('starter', 'barbarian'),
   },
 
   {
@@ -85,7 +85,7 @@ const cards_starter = [
     shield:   1,
     effects:  [],
     desc:     "A barbarian recruit, fresh to rage. Deal 2 Physical damage. Gain 1 Defence.",
-    art:      make_art_painter('starter'),
+    art:      make_art_painter('starter', 'barbarian'),
   },
 
 ];

@@ -5,13 +5,232 @@ const SPRITE_GRID_SIZE        = SPRITE_NATIVE_SIZE / PIXEL_TO_CANVAS_SCALE;
 const SPRITE_GRID_MAX_INDEX   = SPRITE_GRID_SIZE - 1;
 const FALLBACK_FONT_SCALE     = 0.28;
 
-function make_art_painter(role) {
-  if (role === 'starter')  return paint_starter_art;
+function make_art_painter(role, subtype) {
+  if (role === 'starter') {
+    if (subtype === 'bard')      return paint_starter_bard_art;
+    if (subtype === 'fighter')   return paint_starter_fighter_art;
+    if (subtype === 'barbarian') return paint_starter_barbarian_art;
+    return paint_starter_art;
+  }
   if (role === 'physical') return paint_physical_art;
   if (role === 'magical')  return paint_magical_art;
   if (role === 'tactical') return paint_tactical_art;
   console.warn(`make_art_painter: unknown role '${role}', falling back to paint_physical_art.`);
   return paint_physical_art;
+}
+
+function paint_starter_bg(canvas_ctx, canvas_width, canvas_height, top_color, bottom_color) {
+  const gradient = canvas_ctx.createLinearGradient(0, 0, 0, canvas_height);
+  gradient.addColorStop(0, top_color);
+  gradient.addColorStop(1, bottom_color);
+  canvas_ctx.fillStyle = gradient;
+  canvas_ctx.fillRect(0, 0, canvas_width, canvas_height);
+}
+
+function paint_starter_bard_art(canvas) {
+  const canvas_ctx    = canvas.getContext('2d');
+  const canvas_width  = canvas.width;
+  const canvas_height = canvas.height;
+  canvas_ctx.clearRect(0, 0, canvas_width, canvas_height);
+  paint_starter_bg(canvas_ctx, canvas_width, canvas_height, '#221a28', '#0f0816');
+
+  // wooden lute body (oval) + neck + strings + tuning pegs
+  const center_x = canvas_width / 2;
+  const center_y = canvas_height * 0.6;
+
+  // shadow behind body
+  canvas_ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  canvas_ctx.beginPath();
+  canvas_ctx.ellipse(center_x + 2, center_y + 3, canvas_width * 0.22, canvas_height * 0.22, 0, 0, Math.PI * 2);
+  canvas_ctx.fill();
+
+  // body
+  canvas_ctx.fillStyle = '#7a4a1a';
+  canvas_ctx.beginPath();
+  canvas_ctx.ellipse(center_x, center_y, canvas_width * 0.22, canvas_height * 0.22, 0, 0, Math.PI * 2);
+  canvas_ctx.fill();
+  canvas_ctx.fillStyle = '#a06a2a';
+  canvas_ctx.beginPath();
+  canvas_ctx.ellipse(center_x - 2, center_y - 2, canvas_width * 0.18, canvas_height * 0.18, 0, 0, Math.PI * 2);
+  canvas_ctx.fill();
+
+  // sound hole
+  canvas_ctx.fillStyle = '#1a0a04';
+  canvas_ctx.beginPath();
+  canvas_ctx.arc(center_x, center_y, canvas_width * 0.06, 0, Math.PI * 2);
+  canvas_ctx.fill();
+
+  // neck
+  canvas_ctx.fillStyle = '#5a3a14';
+  canvas_ctx.fillRect(center_x - 3, canvas_height * 0.16, 6, canvas_height * 0.32);
+  // headstock
+  canvas_ctx.fillStyle = '#3a2410';
+  canvas_ctx.fillRect(center_x - 6, canvas_height * 0.12, 12, 6);
+  // tuning pegs
+  canvas_ctx.fillStyle = '#d4b050';
+  canvas_ctx.fillRect(center_x - 8, canvas_height * 0.13, 2, 2);
+  canvas_ctx.fillRect(center_x + 6, canvas_height * 0.13, 2, 2);
+
+  // strings
+  canvas_ctx.strokeStyle = 'rgba(220,200,140,0.75)';
+  canvas_ctx.lineWidth = 1;
+  for (let string_index = -1; string_index <= 1; string_index++) {
+    canvas_ctx.beginPath();
+    canvas_ctx.moveTo(center_x + string_index, canvas_height * 0.18);
+    canvas_ctx.lineTo(center_x + string_index, center_y + canvas_height * 0.18);
+    canvas_ctx.stroke();
+  }
+
+  // sparkle note
+  canvas_ctx.fillStyle = '#c4b5fd';
+  canvas_ctx.font = `bold ${Math.floor(canvas_width * 0.18)}px serif`;
+  canvas_ctx.textAlign = 'center';
+  canvas_ctx.textBaseline = 'middle';
+  canvas_ctx.fillText('♪', canvas_width * 0.78, canvas_height * 0.3);
+}
+
+function paint_starter_fighter_art(canvas) {
+  const canvas_ctx    = canvas.getContext('2d');
+  const canvas_width  = canvas.width;
+  const canvas_height = canvas.height;
+  canvas_ctx.clearRect(0, 0, canvas_width, canvas_height);
+  paint_starter_bg(canvas_ctx, canvas_width, canvas_height, '#1a2030', '#080a14');
+
+  const center_x = canvas_width / 2;
+  const center_y = canvas_height * 0.5;
+  const shield_w = canvas_width * 0.4;
+  const shield_h = canvas_height * 0.55;
+
+  // heater-shield silhouette: rectangle on top, point at bottom
+  // shadow
+  canvas_ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(center_x - shield_w/2 + 3, center_y - shield_h/2 + 3);
+  canvas_ctx.lineTo(center_x + shield_w/2 + 3, center_y - shield_h/2 + 3);
+  canvas_ctx.lineTo(center_x + shield_w/2 + 3, center_y + shield_h/6 + 3);
+  canvas_ctx.lineTo(center_x + 3,              center_y + shield_h/2 + 3);
+  canvas_ctx.lineTo(center_x - shield_w/2 + 3, center_y + shield_h/6 + 3);
+  canvas_ctx.closePath();
+  canvas_ctx.fill();
+
+  // shield body (steel)
+  canvas_ctx.fillStyle = '#6a7a8a';
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(center_x - shield_w/2, center_y - shield_h/2);
+  canvas_ctx.lineTo(center_x + shield_w/2, center_y - shield_h/2);
+  canvas_ctx.lineTo(center_x + shield_w/2, center_y + shield_h/6);
+  canvas_ctx.lineTo(center_x,              center_y + shield_h/2);
+  canvas_ctx.lineTo(center_x - shield_w/2, center_y + shield_h/6);
+  canvas_ctx.closePath();
+  canvas_ctx.fill();
+
+  // shield highlight (left)
+  canvas_ctx.fillStyle = '#8a9aab';
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(center_x - shield_w/2, center_y - shield_h/2);
+  canvas_ctx.lineTo(center_x - shield_w/2 + 4, center_y - shield_h/2);
+  canvas_ctx.lineTo(center_x - shield_w/2 + 4, center_y + shield_h/6);
+  canvas_ctx.lineTo(center_x - shield_w/2, center_y + shield_h/6);
+  canvas_ctx.closePath();
+  canvas_ctx.fill();
+
+  // brass boss
+  canvas_ctx.fillStyle = '#b89840';
+  canvas_ctx.beginPath();
+  canvas_ctx.arc(center_x, center_y - shield_h * 0.05, canvas_width * 0.07, 0, Math.PI * 2);
+  canvas_ctx.fill();
+  canvas_ctx.fillStyle = '#fde047';
+  canvas_ctx.beginPath();
+  canvas_ctx.arc(center_x - 1, center_y - shield_h * 0.05 - 1, canvas_width * 0.04, 0, Math.PI * 2);
+  canvas_ctx.fill();
+
+  // cross device
+  canvas_ctx.strokeStyle = '#3a4a5a';
+  canvas_ctx.lineWidth = 2;
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(center_x, center_y - shield_h/2 + 5);
+  canvas_ctx.lineTo(center_x, center_y + shield_h/2 - 5);
+  canvas_ctx.moveTo(center_x - shield_w/2 + 5, center_y);
+  canvas_ctx.lineTo(center_x + shield_w/2 - 5, center_y);
+  canvas_ctx.stroke();
+}
+
+function paint_starter_barbarian_art(canvas) {
+  const canvas_ctx    = canvas.getContext('2d');
+  const canvas_width  = canvas.width;
+  const canvas_height = canvas.height;
+  canvas_ctx.clearRect(0, 0, canvas_width, canvas_height);
+  paint_starter_bg(canvas_ctx, canvas_width, canvas_height, '#2a1410', '#0e0604');
+
+  const center_x = canvas_width / 2;
+
+  // axe handle (diagonal wooden shaft)
+  canvas_ctx.save();
+  canvas_ctx.translate(center_x, canvas_height * 0.5);
+  canvas_ctx.rotate(-0.35);
+
+  // handle shadow
+  canvas_ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  canvas_ctx.fillRect(-3 + 2, -canvas_height * 0.38 + 2, 6, canvas_height * 0.76);
+
+  // wooden handle
+  canvas_ctx.fillStyle = '#6a4520';
+  canvas_ctx.fillRect(-3, -canvas_height * 0.38, 6, canvas_height * 0.76);
+  // handle highlight
+  canvas_ctx.fillStyle = '#8a6530';
+  canvas_ctx.fillRect(-3, -canvas_height * 0.38, 2, canvas_height * 0.76);
+  // handle wrap
+  canvas_ctx.fillStyle = '#3a1a08';
+  canvas_ctx.fillRect(-4, canvas_height * 0.18, 8, 6);
+  canvas_ctx.fillRect(-4, canvas_height * 0.28, 8, 4);
+
+  // axe-head (a quadrilateral fanning right from the top of the handle)
+  const axe_top_y = -canvas_height * 0.34;
+  // shadow
+  canvas_ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(2 + 3, axe_top_y + 2 + 3);
+  canvas_ctx.lineTo(canvas_width * 0.36 + 3, axe_top_y - 4 + 3);
+  canvas_ctx.lineTo(canvas_width * 0.40 + 3, axe_top_y + canvas_height * 0.18 + 3);
+  canvas_ctx.lineTo(2 + 3, axe_top_y + canvas_height * 0.16 + 3);
+  canvas_ctx.closePath();
+  canvas_ctx.fill();
+
+  // axe-head steel
+  canvas_ctx.fillStyle = '#8a8a8a';
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(2,                          axe_top_y);
+  canvas_ctx.lineTo(canvas_width * 0.36,        axe_top_y - 4);
+  canvas_ctx.lineTo(canvas_width * 0.40,        axe_top_y + canvas_height * 0.18);
+  canvas_ctx.lineTo(2,                          axe_top_y + canvas_height * 0.16);
+  canvas_ctx.closePath();
+  canvas_ctx.fill();
+
+  // bevel highlight
+  canvas_ctx.fillStyle = '#cacaca';
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(2,                          axe_top_y);
+  canvas_ctx.lineTo(canvas_width * 0.34,        axe_top_y - 3);
+  canvas_ctx.lineTo(canvas_width * 0.30,        axe_top_y + 2);
+  canvas_ctx.lineTo(2,                          axe_top_y + 4);
+  canvas_ctx.closePath();
+  canvas_ctx.fill();
+
+  // edge
+  canvas_ctx.strokeStyle = '#e0e0e0';
+  canvas_ctx.lineWidth = 1.5;
+  canvas_ctx.beginPath();
+  canvas_ctx.moveTo(canvas_width * 0.36, axe_top_y - 4);
+  canvas_ctx.lineTo(canvas_width * 0.40, axe_top_y + canvas_height * 0.18);
+  canvas_ctx.stroke();
+
+  canvas_ctx.restore();
+
+  // angry red gash splatter (top-left)
+  canvas_ctx.fillStyle = 'rgba(180,30,30,0.65)';
+  canvas_ctx.fillRect(canvas_width * 0.12, canvas_height * 0.18, 4, 2);
+  canvas_ctx.fillRect(canvas_width * 0.18, canvas_height * 0.16, 3, 2);
+  canvas_ctx.fillRect(canvas_width * 0.16, canvas_height * 0.22, 2, 2);
 }
 
 function paint_physical_art(canvas) {

@@ -78,8 +78,11 @@
   --blue:       var(--azure);
   --blue2:      var(--azure-hi);
 
-  --card-sm-w: clamp(92px, 14vh, 132px);
-  --card-sm-h: clamp(126px, 19vh, 180px);
+  /* Card size scales with the SHORTER viewport axis so it adapts to
+     both window height and width. ~13% of the limiting axis. */
+  --card-unit: min(13vh, 9.5vw);
+  --card-sm-w: clamp(92px, var(--card-unit), 200px);
+  --card-sm-h: clamp(126px, calc(var(--card-unit) * 1.4), 280px);
 
   --card-bg-hero:     #16121f;
   --card-bg-starter:  #131318;
@@ -315,8 +318,8 @@ body {
 #city-panel{ border-color: var(--brass-dark) var(--wood-dark) var(--wood-dark) var(--brass-dark); box-shadow: inset 0 0 0 1px var(--brass-dark); }
 
 .entity-sprite-wrap {
-  width: 88px;
-  height: 88px;
+  width: clamp(72px, 9vh, 120px);
+  height: clamp(72px, 9vh, 120px);
   image-rendering: pixelated;
   flex-shrink: 0;
   background: var(--bg-darkest);
@@ -429,14 +432,16 @@ body {
 }
 
 #battlefield {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 0;
   margin: 4px auto;
-  padding: 6px 8px 10px;
+  padding: 14px 18px 18px;
   position: relative;
+  width: fit-content;
+  max-width: 100%;
   background:
     radial-gradient(ellipse at 50% 40%, rgba(184,152,64,0.05) 0%, transparent 70%),
     var(--bg-dark);
@@ -450,14 +455,27 @@ body {
 #battlefield::after {
   content: '';
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   background: var(--brass);
   border: 1px solid var(--brass-dark);
   box-shadow: inset 1px 1px 0 var(--brass-hi);
+  z-index: 2;
 }
-#battlefield::before { top: -2px; left: -2px; }
-#battlefield::after  { bottom: -2px; right: -2px; }
+#battlefield::before { top: 4px; left: 4px; }
+#battlefield::after  { bottom: 4px; right: 4px; }
+#battlefield > .corner-tr,
+#battlefield > .corner-bl {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--brass);
+  border: 1px solid var(--brass-dark);
+  box-shadow: inset 1px 1px 0 var(--brass-hi);
+  z-index: 2;
+}
+#battlefield > .corner-tr { top: 4px; right: 4px; }
+#battlefield > .corner-bl { bottom: 4px; left: 4px; }
 
 .board-row-label {
   font-family: var(--font-display);
@@ -702,7 +720,7 @@ body {
 }
 
 .card-desc {
-  padding: 4px 6px;
+  padding: 4px 6px 8px;
   font-family: var(--font-body);
   font-size: var(--fs-md);
   color: var(--parchment);
@@ -712,6 +730,13 @@ body {
   max-height: clamp(54px, 10vh, 78px);
   flex-shrink: 0;
   background: rgba(0,0,0,0.35);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%);
+}
+/* preview pane shows the whole description, so no fade there */
+#preview-card .card-desc {
+  -webkit-mask-image: none;
+          mask-image: none;
 }
 
 .card-back {
@@ -776,13 +801,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   cursor: default;
   flex-shrink: 0;
 }
 .pile-stack {
-  width: calc(var(--card-sm-w) * 0.62);
-  height: calc(var(--card-sm-h) * 0.5);
+  width: calc(var(--card-sm-w) * 0.78);
+  height: calc(var(--card-sm-h) * 0.55);
   position: relative;
   cursor: default;
 }
@@ -892,32 +917,37 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  justify-content: center;
+  gap: 2px;
   color: var(--brass-hi);
-  padding: 6px 8px;
+  padding: 8px 6px;
   background: var(--bg-darkest);
   border-top:    2px solid var(--brass);
   border-left:   2px solid var(--brass);
   border-right:  2px solid var(--brass-dark);
   border-bottom: 2px solid var(--brass-dark);
   box-shadow: inset 0 0 0 1px var(--brass-dark), 3px 3px 0 var(--shadow);
-  min-width: calc(var(--card-sm-w) * 0.62);
+  width: calc(var(--card-sm-w) * 0.78);
+  height: calc(var(--card-sm-h) * 0.55);
 }
-#gold-display .gold-icon { font-size: 22px; line-height: 1; color: var(--brass-hi); text-shadow: 0 0 6px var(--brass-glow); }
+#gold-display .gold-icon {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--brass-hi);
+  text-shadow: 0 0 6px var(--brass-glow);
+}
 #gold-display .gold-val  {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: var(--fs-pixel-md);
+  font-size: var(--fs-pixel-sm);
   color: var(--parchment-hi);
   text-shadow: 2px 2px 0 var(--bg-darkest);
-  margin-top: 2px;
 }
 #gold-display .gold-label {
   font-family: var(--font-display);
   font-size: var(--fs-pixel-xs);
   letter-spacing: 2px;
   color: var(--brass);
-  margin-top: 3px;
 }
 #gold-display .gold-spent { font-size: var(--fs-sm); color: var(--parchment-dim); }
 
@@ -1090,7 +1120,7 @@ body {
    SIDE PANEL — PREVIEW + LOG
    ============================================================ */
 #fight-side {
-  width: 280px;
+  width: clamp(260px, 18vw, 360px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
