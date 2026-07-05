@@ -11,6 +11,8 @@
 </head>
 <body>
 
+<div id="game-canvas">
+
 <div id="screen-menu" class="screen active">
   <div class="menu-title">
     <h1>CITY HEROES</h1>
@@ -218,6 +220,24 @@
 </div>
 
 <div id="notification" role="alert" aria-live="assertive"></div>
+
+</div><!-- /#game-canvas -->
+
+<script>
+// Scale-to-fit: design canvas is 1600x900, scaled to whatever window we have,
+// centered with letterbox bars. Single source of truth for the layout.
+(function() {
+  const DESIGNED_W = 1600;
+  const DESIGNED_H = 900;
+  const canvas = document.getElementById('game-canvas');
+  function fit() {
+    const scale = Math.min(window.innerWidth / DESIGNED_W, window.innerHeight / DESIGNED_H);
+    canvas.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+})();
+</script>
 
 <script src="00_core_registry.js"></script>
 <script src="03_ui_art_painters.js"></script>
